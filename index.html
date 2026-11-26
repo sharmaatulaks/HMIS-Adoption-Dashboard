@@ -842,6 +842,49 @@
       padding: 26px 20px; text-align: center;
     }
 
+    /* ── Page Switcher & Page 2 Controls ── */
+    .page-switch-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 10px;
+      background: #ffffff; border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 8px 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+    .page-tabs { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+    .page-tab-btn {
+      padding: 7px 14px; font-size: 12.5px; font-weight: 700;
+      border-radius: 8px; border: 1px solid #cbd5e1;
+      background: #f8fafc; color: #475569;
+      display: inline-flex; align-items: center; gap: 7px;
+      cursor: pointer; transition: all .15s;
+    }
+    .page-tab-btn:hover { background: #eff6ff; color: var(--navy); border-color: #93c5fd; }
+    .page-tab-btn.active {
+      background: var(--navy); color: #ffffff; border-color: var(--navy);
+      box-shadow: 0 2px 6px rgba(15, 60, 110, .2);
+    }
+    .date-bar-row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 10px; width: 100%; padding-top: 10px; border-top: 1px solid #f1f5f9;
+    }
+    .date-inputs { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .date-input {
+      padding: 5px 9px; font-size: 12px; font-weight: 600; color: var(--text);
+      border: 1px solid #cbd5e1; border-radius: 7px; background: #fff; font-family: inherit;
+    }
+    .date-input:focus { outline: none; border-color: var(--blue); }
+    .p2-dual-grid {
+      display: grid; grid-template-columns: 1fr; gap: 16px;
+    }
+    @media (min-width: 1024px) {
+      .p2-dual-grid { grid-template-columns: 1fr 1fr; }
+    }
+    .upload-subdivider {
+      margin: 14px 0 10px; padding-top: 12px; border-top: 1px dashed #cbd5e1;
+      font-size: 11.5px; font-weight: 700; color: var(--navy);
+      display: flex; align-items: center; gap: 6px;
+    }
+
     @media print {
       .no-print { display: none !important; }
       body { background: #ffffff; }
@@ -901,6 +944,21 @@
 <main>
   <div class="container main-stack">
 
+    <!-- ─── PAGE SWITCHER BAR ─── -->
+    <div id="pageSwitcherBar" class="page-switch-bar hidden no-print">
+      <div class="page-tabs">
+        <button id="navPage1" type="button" class="page-tab-btn active" onclick="switchPage(1)">
+          <i class="fa-solid fa-hospital-user"></i>
+          <span>Page 1: HMIS Onboarding</span>
+        </button>
+        <button id="navPage2" type="button" class="page-tab-btn" onclick="switchPage(2)">
+          <i class="fa-solid fa-qrcode"></i>
+          <span>Page 2: Scan &amp; Share &amp; HRL</span>
+        </button>
+      </div>
+      <span id="pageContextBadge" style="font-size:11.5px; color:#64748b; font-weight:600;">Active Approved Master: <strong id="masterCountBadge" style="color:var(--navy);">0</strong></span>
+    </div>
+
     <!-- ─── GUEST FALLBACK NOTICE (ONLY WHEN NO DATA AUTO-LOADED & NOT ADMIN) ─── -->
     <div id="guestFileNotice" class="panel-card guest-notice hidden no-print">
       <div style="font-size: 28px; color: var(--blue); margin-bottom: 8px;"><i class="fa-solid fa-chart-pie"></i></div>
@@ -951,6 +1009,8 @@
       <input type="file" id="f1" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',false)">
       <input type="file" id="f1Add" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',true)">
       <input type="file" id="f2" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'file2',false)">
+      <input type="file" id="f3" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'sns',false)">
+      <input type="file" id="f4" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'hrl',false)">
 
       <!-- Two Upload Boxes Beside Each Other -->
       <div class="upload-grid">
@@ -1006,6 +1066,47 @@
         </div>
       </div>
 
+      <!-- Page 2 Activity Upload Boxes (Admin Only) -->
+      <div class="upload-subdivider">
+        <i class="fa-solid fa-qrcode" style="color:var(--blue);"></i>
+        <span>Page 2 Activity Data (Scan &amp; Share &amp; HRL — .csv / .xlsx)</span>
+      </div>
+      <div class="upload-grid" style="margin-bottom: 14px;">
+        <div>
+          <label class="field-label">
+            <i class="fa-solid fa-qrcode" style="color:#0284c7;"></i> File 3 — Scan &amp; Share Token Log (.csv / .xlsx)
+          </label>
+          <div id="zone3" class="upload-zone" onclick="document.getElementById('f3').click()"
+               ondragover="drgOver(event,'zone3')" ondragleave="drgLeave('zone3')" ondrop="drgDrop(event,'sns')">
+            <i id="z3ico" class="fa-solid fa-qrcode upload-zone-icon" style="color:#0284c7;"></i>
+            <div class="upload-zone-text" style="flex:1;">
+              <p id="z3txt" class="upload-zone-main">Click or drag &amp; drop Scan &amp; Share file</p>
+              <p id="z3sub" class="upload-zone-sub">scan_and_share.csv / .xlsx (Date-wise Count)</p>
+            </div>
+            <button id="clearSnsBtn" type="button" onclick="event.stopPropagation(); clearActivityFile('sns')" class="btn btn-danger-soft hidden" title="Clear Scan & Share file" style="padding:4px 8px; font-size:11px; flex-shrink:0;">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">
+            <i class="fa-solid fa-link" style="color:#059669;"></i> File 4 — HRL Linked Log (.csv / .xlsx)
+          </label>
+          <div id="zone4" class="upload-zone" onclick="document.getElementById('f4').click()"
+               ondragover="drgOver(event,'zone4')" ondragleave="drgLeave('zone4')" ondrop="drgDrop(event,'hrl')">
+            <i id="z4ico" class="fa-solid fa-link upload-zone-icon" style="color:#059669;"></i>
+            <div class="upload-zone-text" style="flex:1;">
+              <p id="z4txt" class="upload-zone-main">Click or drag &amp; drop HRL Linked file</p>
+              <p id="z4sub" class="upload-zone-sub">hrl_linked.csv / .xlsx (Date-wise Count)</p>
+            </div>
+            <button id="clearHrlBtn" type="button" onclick="event.stopPropagation(); clearActivityFile('hrl')" class="btn btn-danger-soft hidden" title="Clear HRL file" style="padding:4px 8px; font-size:11px; flex-shrink:0;">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
       <div class="upload-actions">
         <button type="button" onclick="processFiles()" id="processBtn" class="btn btn-primary" style="padding: 9px 18px; font-size: 13px;" disabled>
           <i class="fa-solid fa-gears"></i> Process &amp; Generate Dashboard
@@ -1021,6 +1122,9 @@
       <div class="spinner"></div>
       <p style="font-size:13px; font-weight:600; color:#475569; margin:0;">Processing facility records…</p>
     </div>
+
+    <!-- ─── PAGE 1 WRAP ─── -->
+    <div id="page1Wrap" style="display:flex; flex-direction:column; gap:16px;">
 
     <!-- ─── SINGLE GLOBAL OWNERSHIP FILTER BAR ─── -->
     <div id="ownershipBar" class="panel-card compact-bar hidden">
@@ -1263,6 +1367,262 @@
       </div>
     </div>
 
+    </div><!-- /#page1Wrap -->
+
+    <!-- ══════════════════════════════════════════════════════ PAGE 2: SCAN & SHARE + HRL -->
+    <div id="page2Wrap" class="hidden" style="display:flex; flex-direction:column; gap:16px;">
+
+      <!-- Empty State when no S&S / HRL file loaded yet -->
+      <div id="p2EmptyState" class="panel-card guest-notice">
+        <div style="font-size:28px; color:var(--blue); margin-bottom:8px;"><i class="fa-solid fa-qrcode"></i></div>
+        <h2 style="margin:0 0 6px; font-size:16px; font-weight:800; color:var(--navy);">Scan &amp; Share and HRL Activity Report</h2>
+        <p style="margin:0 auto 14px; max-width:560px; font-size:12.5px; color:var(--muted); line-height:1.55;">
+          No Scan &amp; Share or HRL activity files are currently loaded. Admin can upload <code>scan_and_share.csv</code> / <code>hrl_linked.csv</code> (or <code>.xlsx</code>) or add them to the <code>data/</code> folder for auto-loading.
+        </p>
+        <div style="display:inline-flex; gap:8px; flex-wrap:wrap; justify-content:center;">
+          <button id="p2AdminUploadBtn" type="button" onclick="toggleUploadPanel(true)" class="btn btn-primary hidden">
+            <i class="fa-solid fa-upload"></i> Upload Scan &amp; Share / HRL Files
+          </button>
+          <button id="p2GuestLoginBtn" type="button" onclick="openAdminModal()" class="btn btn-primary">
+            <i class="fa-solid fa-lock"></i> Admin Login to Upload Files
+          </button>
+        </div>
+      </div>
+
+      <!-- Page 2 Filter Bar (Ownership + Date Presets + Custom Start/End) -->
+      <div id="p2FilterBar" class="panel-card compact-bar hidden" style="flex-direction:column; align-items:stretch; gap:10px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.3px;">
+              <i class="fa-solid fa-building-shield" style="color:var(--blue); margin-right:4px;"></i>Ownership:
+            </span>
+            <div id="p2OwnershipBtns" style="display:inline-flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="slicer-chip selected" onclick="setOwnershipFilter('Total')">Total (All)</button>
+              <button type="button" class="slicer-chip" onclick="setOwnershipFilter('Private')">Private</button>
+              <button type="button" class="slicer-chip" onclick="setOwnershipFilter('Public')">Public (Govt)</button>
+            </div>
+          </div>
+          <span id="p2SummaryTag" style="font-size:12px; font-weight:600; color:#0f3c6e;"></span>
+        </div>
+
+        <div class="date-bar-row">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.3px;">
+              <i class="fa-regular fa-calendar-days" style="color:var(--blue); margin-right:4px;"></i>Period:
+            </span>
+            <div id="p2DatePresetBtns" style="display:inline-flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" class="slicer-chip selected" data-preset="month" onclick="setP2DatePreset('month')">This Month</button>
+              <button type="button" class="slicer-chip" data-preset="lastmonth" onclick="setP2DatePreset('lastmonth')">Last Month</button>
+              <button type="button" class="slicer-chip" data-preset="today" onclick="setP2DatePreset('today')">Today</button>
+              <button type="button" class="slicer-chip" data-preset="7d" onclick="setP2DatePreset('7d')">Last 7 Days</button>
+              <button type="button" class="slicer-chip" data-preset="all" onclick="setP2DatePreset('all')">All Time</button>
+              <button type="button" class="slicer-chip" data-preset="custom" onclick="setP2DatePreset('custom')">Custom</button>
+            </div>
+          </div>
+          <div class="date-inputs">
+            <label for="p2StartDate" style="font-size:11.5px; font-weight:600; color:#64748b;">Start:</label>
+            <input id="p2StartDate" type="date" class="date-input" onchange="onP2CustomDateChange()">
+            <label for="p2EndDate" style="font-size:11.5px; font-weight:600; color:#64748b;">End:</label>
+            <input id="p2EndDate" type="date" class="date-input" onchange="onP2CustomDateChange()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Page 2 KPI Cards (4 side-by-side) -->
+      <div id="p2KpiSection" class="kpi-grid hidden">
+        <div class="kpi-card kpi-blue">
+          <div>
+            <p class="kpi-label">S&amp;S Active Facilities</p>
+            <p id="p2KpiSnsFac" class="kpi-value" style="color:#0f172a;">—</p>
+            <p id="p2KpiSnsSub" class="kpi-sub">Active in period</p>
+          </div>
+          <div class="kpi-icon kpi-icon-blue"><i class="fa-solid fa-hospital-user"></i></div>
+        </div>
+
+        <div class="kpi-card kpi-green">
+          <div>
+            <p class="kpi-label">Tokens Issued (Period)</p>
+            <p id="p2KpiTokens" class="kpi-value" style="color:#047857;">—</p>
+            <p id="p2KpiTokensAll" class="kpi-sub" style="color:#059669; font-weight:600;">All-Time: —</p>
+          </div>
+          <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-qrcode"></i></div>
+        </div>
+
+        <div class="kpi-card kpi-amber">
+          <div>
+            <p class="kpi-label">HRL Active Facilities</p>
+            <p id="p2KpiHrlFac" class="kpi-value" style="color:#b45309;">—</p>
+            <p id="p2KpiHrlSub" class="kpi-sub">Active in period</p>
+          </div>
+          <div class="kpi-icon kpi-icon-amber"><i class="fa-solid fa-building-circle-check"></i></div>
+        </div>
+
+        <div class="kpi-card kpi-blue">
+          <div>
+            <p class="kpi-label">HRL Linked (Period)</p>
+            <p id="p2KpiHrl" class="kpi-value" style="color:#0f3c6e;">—</p>
+            <p id="p2KpiHrlAll" class="kpi-sub" style="color:#1d4ed8; font-weight:600;">All-Time: —</p>
+          </div>
+          <div class="kpi-icon kpi-icon-blue"><i class="fa-solid fa-link"></i></div>
+        </div>
+      </div>
+
+      <!-- Page 2 Dashboard Tabs -->
+      <div id="p2DashSection" class="panel-card dash-card hidden">
+        <div class="tab-nav no-print">
+          <button type="button" class="tab-btn p2-tab-btn active" onclick="switchP2Tab('summary', this)">
+            <i class="fa-solid fa-map-location-dot"></i> District Summary (S&amp;S &amp; HRL)
+          </button>
+          <button type="button" class="tab-btn p2-tab-btn" onclick="switchP2Tab('facilities', this)">
+            <i class="fa-solid fa-list-check"></i> Facility Activity List (<span id="p2TabFacCount">0</span>)
+          </button>
+        </div>
+
+        <!-- TAB 1: DISTRICT WISE SUMMARY (SCAN & SHARE + HRL) -->
+        <div id="p2-tab-summary" class="tab-pane p2-tab-pane active">
+          <div class="p2-dual-grid">
+            <!-- Table 1: Scan & Share Status -->
+            <div>
+              <div class="pane-header">
+                <div>
+                  <h3 class="pane-title">1. District-wise Scan &amp; Share Status</h3>
+                  <p class="pane-sub">Click Active Facilities count to inspect facilities in deep list</p>
+                </div>
+                <button type="button" onclick="exportP2DistrictCSV('sns')" class="btn btn-success no-print">
+                  <i class="fa-solid fa-download"></i> Export S&amp;S
+                </button>
+              </div>
+              <div class="table-scroll sticky-col">
+                <table class="dtable">
+                  <thead>
+                    <tr>
+                      <th class="row-th">District</th>
+                      <th>Approved HFR</th>
+                      <th class="th-green">Active (Period)</th>
+                      <th class="th-amber">Active %</th>
+                      <th class="th-green">Tokens (Period)</th>
+                      <th>Tokens (All-Time)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="p2SnsDistrictTbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Table 2: HRL Linked Status -->
+            <div>
+              <div class="pane-header">
+                <div>
+                  <h3 class="pane-title">2. District-wise HRL Linked Status</h3>
+                  <p class="pane-sub">Click Active Facilities count to inspect facilities in deep list</p>
+                </div>
+                <button type="button" onclick="exportP2DistrictCSV('hrl')" class="btn btn-success no-print">
+                  <i class="fa-solid fa-download"></i> Export HRL
+                </button>
+              </div>
+              <div class="table-scroll sticky-col">
+                <table class="dtable">
+                  <thead>
+                    <tr>
+                      <th class="row-th">District</th>
+                      <th>Approved HFR</th>
+                      <th class="th-green">Active (Period)</th>
+                      <th class="th-amber">Active %</th>
+                      <th class="th-green">HRL (Period)</th>
+                      <th>HRL (All-Time)</th>
+                    </tr>
+                  </thead>
+                  <tbody id="p2HrlDistrictTbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <p id="p2SkippedNote" class="hidden" style="font-size:11.5px; color:#64748b; margin:12px 0 0 0;"></p>
+        </div>
+
+        <!-- TAB 2: DEEP DIVE FACILITY ACTIVITY LIST -->
+        <div id="p2-tab-facilities" class="tab-pane p2-tab-pane">
+          <div class="slicer-panel">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+              <span style="font-size:11.5px; font-weight:700; color:#334155; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-sliders" style="color:var(--blue);"></i> Facility Activity Slicers
+              </span>
+              <button type="button" onclick="clearAllP2Slicers()" class="no-print" style="background:none; border:none; color:var(--blue); font-size:12px; font-weight:700; cursor:pointer;">
+                <i class="fa-solid fa-rotate-left"></i> Reset All
+              </button>
+            </div>
+
+            <div class="slicer-grid">
+              <div class="slicer-box">
+                <div class="slicer-box-head">
+                  <span>Activity Status (Period)</span>
+                  <button type="button" onclick="clearP2Slicer('act')" class="no-print" style="background:none; border:none; color:var(--blue); font-size:11px; font-weight:600; cursor:pointer;">All</button>
+                </div>
+                <div id="p2SlicerAct" class="slicer-chips"></div>
+              </div>
+
+              <div class="slicer-box">
+                <div class="slicer-box-head">
+                  <span>Facility Type</span>
+                  <button type="button" onclick="clearP2Slicer('type')" class="no-print" style="background:none; border:none; color:var(--blue); font-size:11px; font-weight:600; cursor:pointer;">All</button>
+                </div>
+                <div id="p2SlicerType" class="slicer-chips"></div>
+              </div>
+
+              <div class="slicer-box">
+                <div class="slicer-box-head">
+                  <span>District</span>
+                  <button type="button" onclick="clearP2Slicer('dist')" class="no-print" style="background:none; border:none; color:var(--blue); font-size:11px; font-weight:600; cursor:pointer;">All</button>
+                </div>
+                <div id="p2SlicerDist" class="slicer-chips"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="ll-toolbar">
+            <p style="font-size:12px; color:#475569; margin:0; font-weight:500;">
+              Showing <strong id="p2LlCount" style="color:#0f172a;">0</strong> of <strong id="p2LlTotal" style="color:#0f172a;">0</strong> approved facilities
+            </p>
+            <div class="ll-search-wrap">
+              <div class="search-box">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="p2LlSearch" oninput="filterP2FacList()" placeholder="Search facility, HFR ID, mobile…">
+              </div>
+              <button type="button" onclick="exportP2FacListCSV()" class="btn btn-success no-print">
+                <i class="fa-solid fa-download"></i> Export CSV
+              </button>
+            </div>
+          </div>
+
+          <div class="desktop-only table-scroll" style="max-height: 520px;">
+            <table class="dtable" style="font-size:12px;">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th class="row-th">District</th>
+                  <th>Ownership</th>
+                  <th class="row-th">Facility Type</th>
+                  <th class="row-th">Facility ID</th>
+                  <th class="row-th">Facility Name</th>
+                  <th class="th-green">Tokens (Period)</th>
+                  <th>Tokens (Total)</th>
+                  <th>Last S&amp;S Date</th>
+                  <th class="th-green">HRL (Period)</th>
+                  <th>HRL (Total)</th>
+                  <th>Last HRL Date</th>
+                  <th class="row-th">Contact &amp; Mobile</th>
+                </tr>
+              </thead>
+              <tbody id="p2LlBody"></tbody>
+            </table>
+          </div>
+
+          <div id="p2LlMobileCards" class="mobile-only"></div>
+        </div>
+      </div>
+
+    </div><!-- /#page2Wrap -->
+
   </div>
 </main>
 
@@ -1364,10 +1724,22 @@ let f1Files = []; // [{ name, rows }]
 let f1Data = null, f2Data = null;
 let f1Names = [], f2Name = '';
 let masterList = [];
+let masterById = {};
 let ownershipFilter = 'Total'; // 'Total' | 'Private' | 'Public'
 let exclusions = new Set(['UWIN', 'UT OF DNH DD PUBLIC HEALTH MANAGEMENT PORTAL', 'PMNDP', 'Nikshay', 'eSanjeevani 2.0']);
 let slcType = new Set(), slcStatus = new Set(), slcDist = new Set(), hmisDistF = new Set();
 const DISTRICTS = ['DADRA AND NAGAR HAVELI', 'DAMAN', 'DIU'];
+
+// Page 2 State (Scan & Share + HRL)
+let currentPage = 1;
+let snsRaw = null, hrlRaw = null;
+let snsName = '', hrlName = '';
+let snsEvents = [], hrlEvents = [];
+let snsSkippedRows = 0, hrlSkippedRows = 0;
+let p2DateMode = 'month';
+let p2Start = '', p2End = '';
+let p2SlcAct = new Set(), p2SlcType = new Set(), p2SlcDist = new Set();
+let p2FacStats = [];
 
 function getActiveMasterList() {
   if (ownershipFilter === 'Private') return masterList.filter(r => r.ownership === 'Private');
@@ -1377,14 +1749,15 @@ function getActiveMasterList() {
 
 function setOwnershipFilter(mode) {
   ownershipFilter = mode;
-  document.querySelectorAll('#ownershipFilterBtns button').forEach(btn => {
+  document.querySelectorAll('#ownershipFilterBtns button, #p2OwnershipBtns button').forEach(btn => {
     const label = btn.textContent.trim();
     const isMatch = (mode === 'Total' && label.startsWith('Total')) ||
                     (mode === 'Private' && label === 'Private') ||
                     (mode === 'Public' && label.startsWith('Public'));
     btn.classList.toggle('selected', isMatch);
   });
-  renderAllDashboard();
+  if (masterList.length) renderAllDashboard();
+  renderP2Dashboard();
 }
 
 // =====================================================================
@@ -1394,8 +1767,8 @@ function drgOver(e, z) { e.preventDefault(); document.getElementById(z).classLis
 function drgLeave(z) { document.getElementById(z).classList.remove('drag-over'); }
 function drgDrop(e, k) {
   e.preventDefault();
-  const z = k === 'file1' ? 'zone1' : 'zone2';
-  document.getElementById(z).classList.remove('drag-over');
+  const zMap = { file1: 'zone1', file2: 'zone2', sns: 'zone3', hrl: 'zone4' };
+  document.getElementById(zMap[k] || 'zone2').classList.remove('drag-over');
   if (e.dataTransfer.files.length) {
     const append = k === 'file1' && f1Files.length > 0;
     loadFiles(e.dataTransfer.files, k, append);
@@ -1431,18 +1804,45 @@ function clearFile1() {
   document.getElementById('processBtn').disabled = true;
 }
 
-function markZoneReady(k, displayLabel, subLabel = '') {
-  const zi = k === 'file1' ? 'z1ico' : 'z2ico';
-  const zt = k === 'file1' ? 'z1txt' : 'z2txt';
-  const zn = k === 'file1' ? 'zone1' : 'zone2';
-  document.getElementById(zt).textContent = '✅ ' + displayLabel;
-  document.getElementById(zi).className = 'fa-solid fa-circle-check upload-zone-icon';
-  document.getElementById(zi).style.color = '#059669';
-  document.getElementById(zn).classList.add('ready');
-  if (k === 'file1') {
-    if (subLabel) document.getElementById('z1sub').textContent = subLabel;
-    document.getElementById('f1ExtraActions').classList.remove('hidden');
+function clearActivityFile(kind) {
+  if (kind === 'sns') {
+    snsRaw = null; snsName = ''; snsEvents = []; snsSkippedRows = 0;
+    document.getElementById('z3txt').textContent = 'Click or drag & drop Scan & Share file';
+    document.getElementById('z3sub').textContent = 'scan_and_share.csv / .xlsx (Date-wise Count)';
+    document.getElementById('z3ico').className = 'fa-solid fa-qrcode upload-zone-icon';
+    document.getElementById('z3ico').style.color = '#0284c7';
+    document.getElementById('zone3').classList.remove('ready');
+    document.getElementById('clearSnsBtn').classList.add('hidden');
+  } else {
+    hrlRaw = null; hrlName = ''; hrlEvents = []; hrlSkippedRows = 0;
+    document.getElementById('z4txt').textContent = 'Click or drag & drop HRL Linked file';
+    document.getElementById('z4sub').textContent = 'hrl_linked.csv / .xlsx (Date-wise Count)';
+    document.getElementById('z4ico').className = 'fa-solid fa-link upload-zone-icon';
+    document.getElementById('z4ico').style.color = '#059669';
+    document.getElementById('zone4').classList.remove('ready');
+    document.getElementById('clearHrlBtn').classList.add('hidden');
   }
+  updateLoadedSummary();
+  if (masterList.length) {
+    rebuildActivityIndex();
+    renderP2Dashboard();
+  }
+}
+
+function markZoneReady(k, displayLabel, subLabel = '') {
+  const cfg = {
+    file1: { zi: 'z1ico', zt: 'z1txt', zn: 'zone1', zs: 'z1sub', act: 'f1ExtraActions' },
+    file2: { zi: 'z2ico', zt: 'z2txt', zn: 'zone2' },
+    sns:   { zi: 'z3ico', zt: 'z3txt', zn: 'zone3', zs: 'z3sub', act: 'clearSnsBtn' },
+    hrl:   { zi: 'z4ico', zt: 'z4txt', zn: 'zone4', zs: 'z4sub', act: 'clearHrlBtn' }
+  }[k];
+  if (!cfg) return;
+  document.getElementById(cfg.zt).textContent = '✅ ' + displayLabel;
+  document.getElementById(cfg.zi).className = 'fa-solid fa-circle-check upload-zone-icon';
+  document.getElementById(cfg.zi).style.color = '#059669';
+  document.getElementById(cfg.zn).classList.add('ready');
+  if (cfg.zs && subLabel) document.getElementById(cfg.zs).textContent = subLabel;
+  if (cfg.act) document.getElementById(cfg.act).classList.remove('hidden');
 }
 
 async function loadFiles(fileList, k, append) {
@@ -1460,22 +1860,46 @@ async function loadFiles(fileList, k, append) {
     f1Names = f1Files.map(f => f.name);
     const sub = f1Files.map(f => `${f.name} (${f.rows.length} rows)`).join(' + ');
     markZoneReady('file1', `${f1Files.length} file(s): ${f1Names.join(' + ')}`, sub);
-  } else {
+  } else if (k === 'file2') {
     const file = files[0];
     const buf = await file.arrayBuffer();
     f2Data = parseBuffer(buf, file.name);
     f2Name = file.name;
     markZoneReady('file2', f2Name);
+  } else if (k === 'sns' || k === 'hrl') {
+    const file = files[0];
+    const buf = await file.arrayBuffer();
+    const rows = parseBuffer(buf, file.name);
+    if (k === 'sns') { snsRaw = rows; snsName = file.name; }
+    else { hrlRaw = rows; hrlName = file.name; }
+    markZoneReady(k, file.name, `${rows.length.toLocaleString('en-IN')} rows loaded`);
+    updateLoadedSummary();
+    if (masterList.length) {
+      rebuildActivityIndex();
+      renderP2Dashboard();
+    }
   }
   document.getElementById('processBtn').disabled = !(f1Data && f1Data.length && f2Data);
 }
 
+async function fetchFirstExisting(paths) {
+  for (const url of paths) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return { name: url.split('/').pop(), buf: await res.arrayBuffer() };
+    } catch (_) { /* ignore missing optional file */ }
+  }
+  return null;
+}
+
 async function loadSavedDataFolder(silent = false) {
   try {
-    const [r1, r2, r1Pub] = await Promise.all([
+    const [r1, r2, r1Pub, snsFile, hrlFile] = await Promise.all([
       fetch('./data/facility_details.xlsx'),
       fetch('./data/ABDM_Enabled_Facilities.csv'),
-      fetch('./data/public_facility_details.xlsx').catch(() => null)
+      fetch('./data/public_facility_details.xlsx').catch(() => null),
+      fetchFirstExisting(['./data/scan_and_share.xlsx', './data/scan_and_share.csv']),
+      fetchFirstExisting(['./data/hrl_linked.xlsx', './data/hrl_linked.csv'])
     ]);
     if (!r1.ok || !r2.ok) throw new Error('Saved data files not reachable');
     const [b1, b2] = await Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]);
@@ -1491,6 +1915,18 @@ async function loadSavedDataFolder(silent = false) {
     const sub = f1Files.map(f => `${f.name} (${f.rows.length} rows)`).join(' + ');
     markZoneReady('file1', `${f1Files.length} file(s): ${f1Names.join(' + ')}`, sub);
     markZoneReady('file2', f2Name);
+
+    if (snsFile) {
+      snsRaw = parseBuffer(snsFile.buf, snsFile.name);
+      snsName = snsFile.name;
+      markZoneReady('sns', snsName, `${snsRaw.length.toLocaleString('en-IN')} rows loaded`);
+    }
+    if (hrlFile) {
+      hrlRaw = parseBuffer(hrlFile.buf, hrlFile.name);
+      hrlName = hrlFile.name;
+      markZoneReady('hrl', hrlName, `${hrlRaw.length.toLocaleString('en-IN')} rows loaded`);
+    }
+
     document.getElementById('processBtn').disabled = false;
     processFiles();
   } catch (err) {
@@ -1692,6 +2128,13 @@ function updateAdminUI(openUploadIfAdmin) {
   const collapseBtn = document.getElementById('collapseUploadBtn');
   const guestNotice = document.getElementById('guestFileNotice');
   const hasData = masterList.length > 0;
+  const pageBar = document.getElementById('pageSwitcherBar');
+  const p2AdminBtn = document.getElementById('p2AdminUploadBtn');
+  const p2GuestBtn = document.getElementById('p2GuestLoginBtn');
+
+  if (pageBar) pageBar.classList.toggle('hidden', !(hasData || isAdminLoggedIn));
+  if (p2AdminBtn) p2AdminBtn.classList.toggle('hidden', !isAdminLoggedIn);
+  if (p2GuestBtn) p2GuestBtn.classList.toggle('hidden', isAdminLoggedIn);
 
   if (isAdminLoggedIn) {
     loginBtn.classList.add('hidden');
@@ -1829,32 +2272,46 @@ function _process() {
 
   // Merge by HFR ID
   masterList = [];
+  masterById = {};
   for (const [id, fac] of Object.entries(appr)) {
     const h = hmisMap[id];
     const latestDate = h && h.dates.length ? [...h.dates].sort().pop() : '';
-    masterList.push({
+    const rec = {
       ...fac,
       ownership: fac.ownership || (h && h.ownership) || 'Private',
       status: h ? 'Facility is ABDM Enabled' : 'Pending',
       hmisNames: h ? h.names : [],
       hmisName: h ? h.names.join(', ') : '(blank)',
       hmisDate: latestDate
-    });
+    };
+    masterList.push(rec);
+    masterById[id] = rec;
   }
 
   // Update timestamp & compact bar
   const now = new Date();
   document.getElementById('lastUpdatedTxt').textContent = now.toLocaleString('en-IN');
   document.getElementById('lastUpdatedPill').classList.remove('hidden');
-  document.getElementById('loadedFilesSummary').textContent = `${f1Names.join(' + ')} & ${f2Name}`;
+  document.getElementById('masterCountBadge').textContent = masterList.length;
+  updateLoadedSummary();
   document.getElementById('exclCountBadge').textContent = exclusions.size;
   updateAdminUI(false);
 
   renderAllDashboard();
+  rebuildActivityIndex();
+  renderP2Dashboard();
 
   document.getElementById('ownershipBar').classList.remove('hidden');
   document.getElementById('kpiSection').classList.remove('hidden');
   document.getElementById('dashSection').classList.remove('hidden');
+}
+
+function updateLoadedSummary() {
+  const parts = [];
+  if (f1Names.length && f2Name) parts.push(`${f1Names.join(' + ')} & ${f2Name}`);
+  if (snsName) parts.push(`S&S: ${snsName}`);
+  if (hrlName) parts.push(`HRL: ${hrlName}`);
+  document.getElementById('loadedFilesSummary').textContent = parts.join(' | ') || 'Loaded';
 }
 
 function renderAllDashboard() {
@@ -2111,7 +2568,7 @@ function drillDown(district, facilityType, status) {
   document.getElementById('llSearch').value = '';
   buildSlicers();
   filterLinelist();
-  const btn = document.querySelectorAll('.tab-btn')[3];
+  const btn = document.querySelectorAll('#dashSection .tab-btn')[3];
   switchTab('linelist', btn);
 }
 
@@ -2122,7 +2579,7 @@ function drillDownHMIS(hmisName) {
   document.getElementById('llSearch').value = hmisName;
   buildSlicers();
   filterLinelist();
-  const btn = document.querySelectorAll('.tab-btn')[3];
+  const btn = document.querySelectorAll('#dashSection .tab-btn')[3];
   switchTab('linelist', btn);
 }
 
@@ -2257,6 +2714,7 @@ function filterLinelist() {
 // EXPORTS
 // =====================================================================
 function exportFullCSV() {
+  if (currentPage === 2) return exportP2FacListCSV(true);
   const list = getActiveMasterList();
   if (!list.length) return alert('Process files first.');
   dl(list.map(r => ({
@@ -2341,11 +2799,436 @@ function dl(data, fname) {
 }
 
 // =====================================================================
+// PAGE 2: SCAN & SHARE + HRL LOGIC
+// =====================================================================
+function switchPage(pageNum) {
+  currentPage = pageNum;
+  document.getElementById('page1Wrap').classList.toggle('hidden', pageNum !== 1);
+  document.getElementById('page2Wrap').classList.toggle('hidden', pageNum !== 2);
+  document.getElementById('navPage1').classList.toggle('active', pageNum === 1);
+  document.getElementById('navPage2').classList.toggle('active', pageNum === 2);
+  if (pageNum === 2) renderP2Dashboard();
+}
+
+function switchP2Tab(id, btn) {
+  document.querySelectorAll('.p2-tab-pane').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.p2-tab-btn').forEach(e => e.classList.remove('active'));
+  document.getElementById('p2-tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function parseActivityDate(val) {
+  if (val === null || val === undefined || val === '') return '';
+  if (typeof val === 'number' && val > 20000 && val < 90000) {
+    const p = XLSX.SSF && XLSX.SSF.parse_date_code ? XLSX.SSF.parse_date_code(val) : null;
+    if (p && p.y && p.m && p.d) {
+      return `${p.y}-${String(p.m).padStart(2, '0')}-${String(p.d).padStart(2, '0')}`;
+    }
+    const dt = new Date(Math.round((val - 25569) * 86400 * 1000));
+    return dt.toISOString().slice(0, 10);
+  }
+  const s = String(val).trim();
+  if (/^\d{5}(\.\d+)?$/.test(s)) return parseActivityDate(Number(s));
+  let m = s.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  return '';
+}
+
+function parseCountVal(val) {
+  const num = Number(String(val ?? '').replace(/,/g, '').trim());
+  return Number.isFinite(num) && num > 0 ? Math.round(num) : 0;
+}
+
+function localISODate(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function applyP2DatePreset(mode) {
+  p2DateMode = mode;
+  const now = new Date();
+  let start = '', end = '';
+  if (mode === 'month') {
+    start = localISODate(new Date(now.getFullYear(), now.getMonth(), 1));
+    end = localISODate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  } else if (mode === 'lastmonth') {
+    start = localISODate(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    end = localISODate(new Date(now.getFullYear(), now.getMonth(), 0));
+  } else if (mode === 'today') {
+    start = end = localISODate(now);
+  } else if (mode === '7d') {
+    const prev = new Date(now);
+    prev.setDate(now.getDate() - 6);
+    start = localISODate(prev);
+    end = localISODate(now);
+  } else if (mode === 'all') {
+    start = '';
+    end = '';
+  } else if (mode === 'custom') {
+    start = document.getElementById('p2StartDate').value || '';
+    end = document.getElementById('p2EndDate').value || '';
+  }
+  p2Start = start;
+  p2End = end;
+  document.getElementById('p2StartDate').value = start;
+  document.getElementById('p2EndDate').value = end;
+  document.querySelectorAll('#p2DatePresetBtns button').forEach(b => {
+    b.classList.toggle('selected', b.dataset.preset === mode);
+  });
+}
+
+function setP2DatePreset(mode) {
+  applyP2DatePreset(mode);
+  renderP2Dashboard();
+}
+
+function onP2CustomDateChange() {
+  applyP2DatePreset('custom');
+  renderP2Dashboard();
+}
+
+function indexActivityRows(rawRows) {
+  if (!rawRows || !rawRows.length) return { events: [], skipped: 0 };
+  const events = [];
+  let skipped = 0;
+  for (const r of rawRows) {
+    const id = nid(r['Facility ID'] || r['Facility Id'] || r['HFR ID'] || r['HFR Id']);
+    if (!id || !masterById[id]) {
+      skipped++;
+      continue;
+    }
+    const c = parseCountVal(r['Count'] ?? r['Token Count'] ?? r['Tokens'] ?? r['HRL Count']);
+    if (c <= 0) continue;
+    const d = parseActivityDate(r['Date'] || r['Date of Token Issue'] || r['Activity Date']);
+    if (!d) continue;
+    events.push({ id, d, c });
+  }
+  return { events, skipped };
+}
+
+function rebuildActivityIndex() {
+  const s = indexActivityRows(snsRaw);
+  snsEvents = s.events;
+  snsSkippedRows = s.skipped;
+  const h = indexActivityRows(hrlRaw);
+  hrlEvents = h.events;
+  hrlSkippedRows = h.skipped;
+}
+
+function inP2Period(dateIso) {
+  if (p2Start && dateIso < p2Start) return false;
+  if (p2End && dateIso > p2End) return false;
+  return true;
+}
+
+function computeP2FacilityStats() {
+  const list = getActiveMasterList();
+  const snsMap = {}, hrlMap = {};
+
+  for (const ev of snsEvents) {
+    let rec = snsMap[ev.id];
+    if (!rec) rec = snsMap[ev.id] = { pCount: 0, tCount: 0, lastDate: '' };
+    rec.tCount += ev.c;
+    if (ev.d > rec.lastDate) rec.lastDate = ev.d;
+    if (inP2Period(ev.d)) rec.pCount += ev.c;
+  }
+
+  for (const ev of hrlEvents) {
+    let rec = hrlMap[ev.id];
+    if (!rec) rec = hrlMap[ev.id] = { pCount: 0, tCount: 0, lastDate: '' };
+    rec.tCount += ev.c;
+    if (ev.d > rec.lastDate) rec.lastDate = ev.d;
+    if (inP2Period(ev.d)) rec.pCount += ev.c;
+  }
+
+  p2FacStats = list.map(fac => {
+    const s = snsMap[fac.hfrId];
+    const h = hrlMap[fac.hfrId];
+    const pSns = s ? s.pCount : 0;
+    const tSns = s ? s.tCount : 0;
+    const pHrl = h ? h.pCount : 0;
+    const tHrl = h ? h.tCount : 0;
+    return {
+      ...fac,
+      pSns, tSns, lastSns: s ? s.lastDate : '',
+      pHrl, tHrl, lastHrl: h ? h.lastDate : '',
+      activeInPeriod: (pSns > 0 || pHrl > 0)
+    };
+  }).sort((a, b) => (b.pSns + b.pHrl) - (a.pSns + a.pHrl) || (b.tSns + b.tHrl) - (a.tSns + a.tHrl) || a.name.localeCompare(b.name));
+}
+
+function getP2PeriodLabel() {
+  if (!p2Start && !p2End) return 'All Time';
+  if (p2Start && p2End) return `${p2Start} to ${p2End}`;
+  if (p2Start) return `From ${p2Start}`;
+  return `Up to ${p2End}`;
+}
+
+function renderP2DistrictTable(tbodyId, kind) {
+  const tb = document.getElementById(tbodyId);
+  tb.innerHTML = '';
+  let gAppr = 0, gAct = 0, gPeriod = 0, gTotal = 0;
+
+  for (const dist of DISTRICTS) {
+    const rows = p2FacStats.filter(r => r.district === dist);
+    const apprCnt = rows.length;
+    const actCnt = rows.filter(r => kind === 'sns' ? r.pSns > 0 : r.pHrl > 0).length;
+    const pSum = rows.reduce((acc, r) => acc + (kind === 'sns' ? r.pSns : r.pHrl), 0);
+    const tSum = rows.reduce((acc, r) => acc + (kind === 'sns' ? r.tSns : r.tHrl), 0);
+    gAppr += apprCnt; gAct += actCnt; gPeriod += pSum; gTotal += tSum;
+    const pct = apprCnt > 0 ? ((actCnt / apprCnt) * 100).toFixed(1) + '%' : '—';
+    const actLabel = kind === 'sns' ? 'Active in S&S' : 'Active in HRL';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="row-label">${tc(dist)}</td>
+      <td style="font-weight:700;">${apprCnt}</td>
+      <td class="cell-adopted"><span class="clickable-num" onclick="drillDownP2('${dist}','${actLabel}')">${actCnt}</span></td>
+      <td style="font-weight:700; color:#b45309;">${pct}</td>
+      <td style="font-weight:700; color:#047857;">${pSum.toLocaleString('en-IN')}</td>
+      <td style="font-weight:600; color:#334155;">${tSum.toLocaleString('en-IN')}</td>`;
+    tb.appendChild(tr);
+  }
+
+  const gPct = gAppr > 0 ? ((gAct / gAppr) * 100).toFixed(1) + '%' : '—';
+  const tr = document.createElement('tr');
+  tr.className = 'grand-row';
+  tr.innerHTML = `
+    <td class="row-label">Grand Total</td>
+    <td>${gAppr}</td>
+    <td class="cell-adopted"><span class="clickable-num" onclick="drillDownP2('','${kind === 'sns' ? 'Active in S&S' : 'Active in HRL'}')">${gAct}</span></td>
+    <td>${gPct}</td>
+    <td style="color:#047857;">${gPeriod.toLocaleString('en-IN')}</td>
+    <td>${gTotal.toLocaleString('en-IN')}</td>`;
+  tb.appendChild(tr);
+}
+
+function renderP2Dashboard() {
+  const hasAny = Boolean(snsRaw || hrlRaw);
+  document.getElementById('p2EmptyState').classList.toggle('hidden', hasAny);
+  document.getElementById('p2FilterBar').classList.toggle('hidden', !hasAny);
+  document.getElementById('p2KpiSection').classList.toggle('hidden', !hasAny);
+  document.getElementById('p2DashSection').classList.toggle('hidden', !hasAny);
+  if (!hasAny || !masterList.length) return;
+
+  computeP2FacilityStats();
+
+  const apprCnt = p2FacStats.length;
+  const snsAct = p2FacStats.filter(r => r.pSns > 0).length;
+  const hrlAct = p2FacStats.filter(r => r.pHrl > 0).length;
+  const pTok = p2FacStats.reduce((s, r) => s + r.pSns, 0);
+  const tTok = p2FacStats.reduce((s, r) => s + r.tSns, 0);
+  const pHrl = p2FacStats.reduce((s, r) => s + r.pHrl, 0);
+  const tHrl = p2FacStats.reduce((s, r) => s + r.tHrl, 0);
+
+  const snsPct = apprCnt > 0 ? ((snsAct / apprCnt) * 100).toFixed(1) : '0.0';
+  const hrlPct = apprCnt > 0 ? ((hrlAct / apprCnt) * 100).toFixed(1) : '0.0';
+
+  document.getElementById('p2KpiSnsFac').textContent = `${snsAct} / ${apprCnt}`;
+  document.getElementById('p2KpiSnsSub').textContent = `${snsPct}% active in period`;
+  document.getElementById('p2KpiTokens').textContent = snsRaw ? pTok.toLocaleString('en-IN') : '—';
+  document.getElementById('p2KpiTokensAll').textContent = snsRaw ? `All-Time Total: ${tTok.toLocaleString('en-IN')}` : 'S&S file not loaded';
+  document.getElementById('p2KpiHrlFac').textContent = `${hrlAct} / ${apprCnt}`;
+  document.getElementById('p2KpiHrlSub').textContent = `${hrlPct}% active in period`;
+  document.getElementById('p2KpiHrl').textContent = hrlRaw ? pHrl.toLocaleString('en-IN') : '—';
+  document.getElementById('p2KpiHrlAll').textContent = hrlRaw ? `All-Time Total: ${tHrl.toLocaleString('en-IN')}` : 'HRL file not loaded';
+
+  const label = ownershipFilter === 'Total' ? 'Total (All)' : `${ownershipFilter} Only`;
+  document.getElementById('p2SummaryTag').textContent = `View: ${label} • ${apprCnt} Approved • ${getP2PeriodLabel()}`;
+  document.getElementById('p2TabFacCount').textContent = apprCnt;
+
+  renderP2DistrictTable('p2SnsDistrictTbody', 'sns');
+  renderP2DistrictTable('p2HrlDistrictTbody', 'hrl');
+
+  const skipEl = document.getElementById('p2SkippedNote');
+  if (snsSkippedRows > 0 || hrlSkippedRows > 0) {
+    skipEl.textContent = `* Excluded historical/deactivated rows with Facility ID not found in Active Approved HFR Master — S&S: ${snsSkippedRows.toLocaleString('en-IN')} rows, HRL: ${hrlSkippedRows.toLocaleString('en-IN')} rows.`;
+    skipEl.classList.remove('hidden');
+  } else {
+    skipEl.classList.add('hidden');
+  }
+
+  buildP2Slicers();
+  filterP2FacList();
+}
+
+function drillDownP2(dist, actLabel) {
+  p2SlcDist.clear(); p2SlcType.clear(); p2SlcAct.clear();
+  if (dist) p2SlcDist.add(dist);
+  if (actLabel) p2SlcAct.add(actLabel);
+  document.getElementById('p2LlSearch').value = '';
+  buildP2Slicers();
+  filterP2FacList();
+  const btn = document.querySelectorAll('.p2-tab-btn')[1];
+  switchP2Tab('facilities', btn);
+}
+
+const P2_ACT_OPTS = ['Active (S&S or HRL)', 'Active in S&S', 'Active in HRL', 'Inactive (Zero in Period)'];
+
+function buildP2Slicers() {
+  const types = [...new Set(p2FacStats.map(r => r.facilityType))].filter(Boolean).sort();
+  buildP2Chips('p2SlicerAct', P2_ACT_OPTS, p2SlcAct, 'act');
+  buildP2Chips('p2SlicerType', types, p2SlcType, 'type');
+  buildP2Chips('p2SlicerDist', DISTRICTS.map(tc), p2SlcDist, 'dist');
+}
+
+function buildP2Chips(cid, opts, sel, key) {
+  const c = document.getElementById(cid);
+  c.innerHTML = '';
+  opts.forEach(opt => {
+    const rawVal = key === 'dist' ? opt.toUpperCase() : opt;
+    const ch = document.createElement('div');
+    const isSel = sel.size === 0 || sel.has(rawVal);
+    ch.className = 'slicer-chip' + (isSel ? ' selected' : '');
+    ch.textContent = opt;
+    ch.onclick = () => {
+      if (sel.size === 0) sel.add(rawVal);
+      else if (sel.has(rawVal)) sel.delete(rawVal);
+      else sel.add(rawVal);
+      buildP2Chips(cid, opts, sel, key);
+      filterP2FacList();
+    };
+    c.appendChild(ch);
+  });
+}
+
+function clearP2Slicer(key) {
+  if (key === 'act') p2SlcAct.clear();
+  if (key === 'type') p2SlcType.clear();
+  if (key === 'dist') p2SlcDist.clear();
+  buildP2Slicers();
+  filterP2FacList();
+}
+
+function clearAllP2Slicers() {
+  p2SlcAct.clear(); p2SlcType.clear(); p2SlcDist.clear();
+  document.getElementById('p2LlSearch').value = '';
+  buildP2Slicers();
+  filterP2FacList();
+}
+
+function matchP2Act(r) {
+  if (p2SlcAct.size === 0) return true;
+  if (p2SlcAct.has('Active (S&S or HRL)') && r.activeInPeriod) return true;
+  if (p2SlcAct.has('Active in S&S') && r.pSns > 0) return true;
+  if (p2SlcAct.has('Active in HRL') && r.pHrl > 0) return true;
+  if (p2SlcAct.has('Inactive (Zero in Period)') && !r.activeInPeriod) return true;
+  return false;
+}
+
+function getFilteredP2FacList() {
+  const q = (document.getElementById('p2LlSearch')?.value || '').toLowerCase();
+  return p2FacStats.filter(r => {
+    const aM = matchP2Act(r);
+    const tM = p2SlcType.size === 0 || p2SlcType.has(r.facilityType);
+    const dM = p2SlcDist.size === 0 || p2SlcDist.has(r.district) || p2SlcDist.has(tc(r.district));
+    const qM = !q || r.name.toLowerCase().includes(q) || r.hfrId.toLowerCase().includes(q) || r.contactMobile.toLowerCase().includes(q);
+    return aM && tM && dM && qM;
+  });
+}
+
+function filterP2FacList() {
+  const rows = getFilteredP2FacList();
+  document.getElementById('p2LlCount').textContent = rows.length;
+  document.getElementById('p2LlTotal').textContent = p2FacStats.length;
+
+  const tb = document.getElementById('p2LlBody');
+  const mob = document.getElementById('p2LlMobileCards');
+  tb.innerHTML = '';
+  mob.innerHTML = '';
+
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="13" style="padding:32px; color:#94a3b8; font-weight:600; text-align:center;">No facilities match the selected filters.</td></tr>`;
+    mob.innerHTML = `<div class="mob-card" style="text-align:center; color:#94a3b8; font-weight:600; padding:24px;">No facilities match the selected filters.</div>`;
+    return;
+  }
+
+  const fragT = document.createDocumentFragment();
+  const fragM = document.createDocumentFragment();
+
+  rows.forEach((r, i) => {
+    const ownBadge = r.ownership === 'Public'
+      ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Public</span>`
+      : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Private</span>`;
+    const contactTxt = [r.contactPerson, r.contactMobile].filter(Boolean).join(' • ') || '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#94a3b8;">${i + 1}</td>
+      <td class="row-label">${esc(tc(r.district))}</td>
+      <td>${ownBadge}</td>
+      <td style="text-align:left;">${esc(r.facilityType)}</td>
+      <td style="font-family:monospace; font-size:11.5px; color:#1d4ed8;">${esc(r.hfrId)}</td>
+      <td style="text-align:left; font-weight:600;">${esc(r.name)}</td>
+      <td class="${r.pSns > 0 ? 'cell-adopted' : ''}">${r.pSns.toLocaleString('en-IN')}</td>
+      <td style="font-weight:600;">${r.tSns.toLocaleString('en-IN')}</td>
+      <td style="font-size:11px; color:#64748b; white-space:nowrap;">${esc(r.lastSns || '—')}</td>
+      <td class="${r.pHrl > 0 ? 'cell-adopted' : ''}">${r.pHrl.toLocaleString('en-IN')}</td>
+      <td style="font-weight:600;">${r.tHrl.toLocaleString('en-IN')}</td>
+      <td style="font-size:11px; color:#64748b; white-space:nowrap;">${esc(r.lastHrl || '—')}</td>
+      <td style="text-align:left; font-size:11.5px;">${esc(contactTxt)}</td>`;
+    fragT.appendChild(tr);
+
+    const card = document.createElement('div');
+    card.className = 'mob-card';
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:6px;">
+        <div>
+          <p style="font-size:13.5px; font-weight:700; color:#0f172a; margin:0;">${esc(r.name)}</p>
+          <p style="font-size:11px; font-family:monospace; color:#1d4ed8; margin:2px 0 0;">${esc(r.hfrId)} &bull; ${esc(tc(r.district))} &bull; ${esc(r.ownership)}</p>
+        </div>
+        ${ownBadge}
+      </div>
+      <div style="font-size:12px; color:#334155; border-top:1px solid #f1f5f9; padding-top:6px; display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+        <div><strong>S&amp;S Tokens:</strong> ${r.pSns.toLocaleString('en-IN')} <span style="color:#64748b;">(Tot: ${r.tSns.toLocaleString('en-IN')})</span></div>
+        <div><strong>HRL Linked:</strong> ${r.pHrl.toLocaleString('en-IN')} <span style="color:#64748b;">(Tot: ${r.tHrl.toLocaleString('en-IN')})</span></div>
+      </div>`;
+    fragM.appendChild(card);
+  });
+
+  tb.appendChild(fragT);
+  mob.appendChild(fragM);
+}
+
+function exportP2DistrictCSV(kind) {
+  if (!p2FacStats.length) return;
+  const label = kind === 'sns' ? 'Tokens' : 'HRL';
+  const data = DISTRICTS.map(d => {
+    const rows = p2FacStats.filter(r => r.district === d);
+    const apprCnt = rows.length;
+    const actCnt = rows.filter(r => kind === 'sns' ? r.pSns > 0 : r.pHrl > 0).length;
+    const pSum = rows.reduce((s, r) => s + (kind === 'sns' ? r.pSns : r.pHrl), 0);
+    const tSum = rows.reduce((s, r) => s + (kind === 'sns' ? r.tSns : r.tHrl), 0);
+    return {
+      'District': tc(d), 'Ownership': ownershipFilter, 'Period': getP2PeriodLabel(),
+      'Approved HFR': apprCnt, 'Active Facilities (Period)': actCnt,
+      'Active %': apprCnt > 0 ? ((actCnt / apprCnt) * 100).toFixed(1) + '%' : '—',
+      [`${label} (Period)`]: pSum, [`${label} (All-Time)`]: tSum
+    };
+  });
+  dl(data, `District_${kind === 'sns' ? 'ScanShare' : 'HRL'}_${ownershipFilter}.csv`);
+}
+
+function exportP2FacListCSV(allRows = false) {
+  if (!p2FacStats.length) return alert('No Scan & Share / HRL activity loaded.');
+  const rows = allRows ? p2FacStats : getFilteredP2FacList();
+  dl(rows.map(r => ({
+    'District': tc(r.district), 'Ownership': r.ownership, 'Facility Type': r.facilityType,
+    'Facility ID': r.hfrId, 'Facility Name': r.name,
+    'Period': getP2PeriodLabel(),
+    'Tokens (Period)': r.pSns, 'Tokens (All-Time)': r.tSns, 'Last S&S Date': r.lastSns || '',
+    'HRL (Period)': r.pHrl, 'HRL (All-Time)': r.tHrl, 'Last HRL Date': r.lastHrl || '',
+    'Contact Person': r.contactPerson, 'Mobile No': r.contactMobile
+  })), `ScanShare_HRL_Facility_Report_${ownershipFilter}.csv`);
+}
+
+// =====================================================================
 // TAB SWITCH & UTILS
 // =====================================================================
 function switchTab(id, btn) {
-  document.querySelectorAll('.tab-pane').forEach(e => e.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('#dashSection .tab-pane').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('#dashSection .tab-btn').forEach(e => e.classList.remove('active'));
   document.getElementById('tab-' + id).classList.add('active');
   if (btn) btn.classList.add('active');
 }
@@ -2357,6 +3240,7 @@ const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 // INIT
 // =====================================================================
 renderExclusions();
+applyP2DatePreset('month');
 updateAdminUI(false);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAdminModal(); });
 if (window.location.protocol.startsWith('http')) {
