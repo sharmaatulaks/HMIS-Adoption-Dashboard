@@ -791,6 +791,48 @@
       .search-box input { width: 100%; }
     }
 
+    /* ── Admin Modal & Auth Helpers ── */
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(15, 23, 42, .52);
+      backdrop-filter: blur(2px);
+      display: flex; align-items: center; justify-content: center; padding: 16px;
+    }
+    .modal-box {
+      background: var(--surface); border-radius: var(--radius-lg);
+      box-shadow: 0 20px 50px rgba(15, 23, 42, .22);
+      border: 1px solid var(--border);
+      width: 100%; max-width: 390px; overflow: hidden;
+    }
+    .modal-head {
+      padding: 15px 18px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f8fafc;
+    }
+    .modal-title { font-size: 15px; font-weight: 800; color: var(--navy); display: flex; align-items: center; gap: 8px; margin: 0; }
+    .modal-body { padding: 18px; }
+    .modal-desc { font-size: 12px; color: var(--muted); margin: 0 0 14px; line-height: 1.5; }
+    .form-group { margin-bottom: 12px; }
+    .form-label { display: block; font-size: 11.5px; font-weight: 700; color: #334155; margin-bottom: 5px; }
+    .form-input {
+      width: 100%; padding: 9px 12px; font-size: 13px; border-radius: 8px;
+      border: 1px solid #cbd5e1; color: var(--text); outline: none; font-family: inherit;
+    }
+    .form-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37, 99, 235, .12); }
+    .login-error {
+      background: var(--red-soft); border: 1px solid #fecaca; color: #991b1b;
+      font-size: 12px; font-weight: 600; padding: 8px 11px; border-radius: 8px; margin-bottom: 12px;
+    }
+    .session-note {
+      background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
+      border-radius: 8px; padding: 8px 12px; font-size: 11.5px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 8px; line-height: 1.45;
+    }
+    .session-note code { background: rgba(37, 99, 235, .1); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+    .guest-notice {
+      padding: 26px 20px; text-align: center;
+    }
+
     @media print {
       .no-print { display: none !important; }
       body { background: #ffffff; }
@@ -833,6 +875,14 @@
           <i class="fa-solid fa-file-csv"></i>
           <span class="hide-xs">Export CSV</span>
         </button>
+        <button id="adminLoginBtn" type="button" onclick="openAdminModal()" class="btn btn-outline">
+          <i class="fa-solid fa-lock" style="color:var(--navy);"></i>
+          <span class="hide-xs">Admin Login</span>
+        </button>
+        <button id="adminLogoutBtn" type="button" onclick="adminLogout()" class="btn btn-danger-soft hidden">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span class="hide-xs">Logout</span>
+        </button>
       </div>
     </div>
   </div>
@@ -841,6 +891,18 @@
 <!-- ══════════════════════════════════════════════════════ MAIN -->
 <main>
   <div class="container main-stack">
+
+    <!-- ─── GUEST FALLBACK NOTICE (ONLY WHEN NO DATA AUTO-LOADED & NOT ADMIN) ─── -->
+    <div id="guestFileNotice" class="panel-card guest-notice hidden no-print">
+      <div style="font-size: 28px; color: var(--blue); margin-bottom: 8px;"><i class="fa-solid fa-chart-pie"></i></div>
+      <h2 style="margin: 0 0 6px; font-size: 16px; font-weight: 800; color: var(--navy);">ABDM – HMIS Onboarding Dashboard</h2>
+      <p style="margin: 0 auto 14px; max-width: 520px; font-size: 12.5px; color: var(--muted); line-height: 1.55;">
+        Default saved data could not be auto-loaded in direct file mode. Run via <strong>Start_Dashboard.bat</strong> or GitHub Pages, or sign in as Admin to upload files for this session.
+      </p>
+      <button type="button" onclick="openAdminModal()" class="btn btn-primary">
+        <i class="fa-solid fa-lock"></i> Admin Login to Upload Files
+      </button>
+    </div>
 
     <!-- ─── COMPACT DATA STATUS BAR ─── -->
     <div id="compactDataBar" class="panel-card compact-bar hidden no-print">
@@ -856,7 +918,7 @@
     </div>
 
     <!-- ─── UPLOAD SECTION ─── -->
-    <div id="uploadSection" class="panel-card upload-section no-print">
+    <div id="uploadSection" class="panel-card upload-section hidden no-print">
       <div class="upload-header">
         <h2 class="upload-title">
           <span class="upload-title-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
@@ -865,6 +927,10 @@
         <button id="collapseUploadBtn" type="button" onclick="toggleUploadPanel(false)" class="btn btn-outline hidden" style="padding: 4px 10px; font-size: 11.5px;">
           <i class="fa-solid fa-chevron-up"></i> Hide
         </button>
+      </div>
+      <div class="session-note">
+        <i class="fa-solid fa-circle-info"></i>
+        <span><strong>Meeting / Live Session Upload:</strong> Files uploaded here update the dashboard immediately in this browser session. To update the default report for all viewers, upload the updated files to <code>data/</code> on GitHub afterwards.</span>
       </div>
 
       <!-- Hidden File Inputs kept OUTSIDE clickable drop zones to prevent event bubbling -->
@@ -1194,10 +1260,48 @@
   </p>
 </footer>
 
+<!-- ══════════════════════════════════════════════════════ ADMIN LOGIN MODAL -->
+<div id="adminModal" class="modal-backdrop hidden no-print" onclick="if(event.target===this) closeAdminModal()">
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="adminModalTitle">
+    <div class="modal-head">
+      <h3 id="adminModalTitle" class="modal-title">
+        <i class="fa-solid fa-shield-halved" style="color:var(--blue);"></i>
+        Admin Login
+      </h3>
+      <button type="button" onclick="closeAdminModal()" class="btn btn-outline" style="padding:4px 9px;font-size:11px;">✕</button>
+    </div>
+    <form class="modal-body" onsubmit="handleAdminLogin(event)">
+      <p class="modal-desc">Sign in to upload updated Facility / HMIS Excel or CSV files during meetings or edit Program MIS exclusions.</p>
+      <div id="adminLoginErr" class="login-error hidden"></div>
+      <div class="form-group">
+        <label class="form-label" for="adminUser">Username</label>
+        <input id="adminUser" class="form-input" type="text" autocomplete="username" placeholder="Enter admin username" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 16px;">
+        <label class="form-label" for="adminPass">Password</label>
+        <input id="adminPass" class="form-input" type="password" autocomplete="current-password" placeholder="Enter password" required>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:8px;">
+        <button type="button" onclick="closeAdminModal()" class="btn btn-outline">Cancel</button>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa-solid fa-right-to-bracket"></i> Sign In
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 // =====================================================================
-// STATE
+// STATE & ADMIN AUTH CONFIG
 // =====================================================================
+// SHA-256 hashes for default Admin credentials (admin / admin123)
+const ADMIN_USER_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
+const ADMIN_PASS_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+const ADMIN_SESSION_KEY = 'abdm_hmis_admin';
+let isAdminLoggedIn = sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
+let initialLoadPending = window.location.protocol.startsWith('http');
+
 let f1Files = []; // [{ name, rows }]
 let f1Data = null, f2Data = null;
 let f1Names = [], f2Name = '';
@@ -1333,10 +1437,129 @@ async function loadSavedDataFolder(silent = false) {
     processFiles();
   } catch (err) {
     if (!silent) alert('Auto-load from data/ requires running via Start_Dashboard.bat (localhost). Please drag & drop or select File 1 and File 2 above.');
+  } finally {
+    initialLoadPending = false;
+    updateAdminUI();
+  }
+}
+
+function sha256Hex(ascii) {
+  const bytes = new TextEncoder().encode(String(ascii));
+  const K = [
+    0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+    0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+    0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+    0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+    0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+    0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+    0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+    0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2
+  ];
+  const H = [0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const bitLen = bytes.length * 8;
+  const paddedLen = Math.ceil((bytes.length + 9) / 64) * 64;
+  const buf = new Uint8Array(paddedLen);
+  buf.set(bytes);
+  buf[bytes.length] = 0x80;
+  const view = new DataView(buf.buffer);
+  view.setUint32(paddedLen - 4, bitLen >>> 0, false);
+  view.setUint32(paddedLen - 8, Math.floor(bitLen / 0x100000000), false);
+  const rrot = (v, n) => (v >>> n) | (v << (32 - n));
+  const W = new Int32Array(64);
+  for (let i = 0; i < paddedLen; i += 64) {
+    for (let t = 0; t < 16; t++) W[t] = view.getInt32(i + t * 4, false);
+    for (let t = 16; t < 64; t++) {
+      const s0 = rrot(W[t-15], 7) ^ rrot(W[t-15], 18) ^ (W[t-15] >>> 3);
+      const s1 = rrot(W[t-2], 17) ^ rrot(W[t-2], 19) ^ (W[t-2] >>> 10);
+      W[t] = (W[t-16] + s0 + W[t-7] + s1) | 0;
+    }
+    let [a,b,c,d,e,f,g,h] = H;
+    for (let t = 0; t < 64; t++) {
+      const S1 = rrot(e, 6) ^ rrot(e, 11) ^ rrot(e, 25);
+      const ch = (e & f) ^ (~e & g);
+      const temp1 = (h + S1 + ch + K[t] + W[t]) | 0;
+      const S0 = rrot(a, 2) ^ rrot(a, 13) ^ rrot(a, 22);
+      const maj = (a & b) ^ (a & c) ^ (b & c);
+      const temp2 = (S0 + maj) | 0;
+      h = g; g = f; f = e; e = (d + temp1) | 0;
+      d = c; c = b; b = a; a = (temp1 + temp2) | 0;
+    }
+    H[0]=(H[0]+a)|0; H[1]=(H[1]+b)|0; H[2]=(H[2]+c)|0; H[3]=(H[3]+d)|0;
+    H[4]=(H[4]+e)|0; H[5]=(H[5]+f)|0; H[6]=(H[6]+g)|0; H[7]=(H[7]+h)|0;
+  }
+  return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
+}
+
+function openAdminModal() {
+  document.getElementById('adminLoginErr').classList.add('hidden');
+  document.getElementById('adminUser').value = '';
+  document.getElementById('adminPass').value = '';
+  document.getElementById('adminModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('adminUser').focus(), 40);
+}
+
+function closeAdminModal() {
+  document.getElementById('adminModal').classList.add('hidden');
+}
+
+function handleAdminLogin(e) {
+  e.preventDefault();
+  const u = document.getElementById('adminUser').value.trim();
+  const p = document.getElementById('adminPass').value;
+  if (sha256Hex(u) === ADMIN_USER_HASH && sha256Hex(p) === ADMIN_PASS_HASH) {
+    isAdminLoggedIn = true;
+    sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
+    closeAdminModal();
+    updateAdminUI(true);
+  } else {
+    const err = document.getElementById('adminLoginErr');
+    err.textContent = 'Invalid username or password.';
+    err.classList.remove('hidden');
+  }
+}
+
+function adminLogout() {
+  isAdminLoggedIn = false;
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  updateAdminUI(false);
+}
+
+function updateAdminUI(openUploadIfAdmin) {
+  const loginBtn = document.getElementById('adminLoginBtn');
+  const logoutBtn = document.getElementById('adminLogoutBtn');
+  const toggleBtn = document.getElementById('toggleUploadBtn');
+  const sec = document.getElementById('uploadSection');
+  const bar = document.getElementById('compactDataBar');
+  const collapseBtn = document.getElementById('collapseUploadBtn');
+  const guestNotice = document.getElementById('guestFileNotice');
+  const hasData = masterList.length > 0;
+
+  if (isAdminLoggedIn) {
+    loginBtn.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+    guestNotice.classList.add('hidden');
+    toggleBtn.classList.toggle('hidden', !hasData);
+    collapseBtn.classList.toggle('hidden', !hasData);
+    const shouldOpen = openUploadIfAdmin === true || !hasData;
+    if (shouldOpen) {
+      sec.classList.remove('hidden');
+      bar.classList.add('hidden');
+    } else {
+      sec.classList.add('hidden');
+      bar.classList.remove('hidden');
+    }
+  } else {
+    loginBtn.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+    toggleBtn.classList.add('hidden');
+    sec.classList.add('hidden');
+    bar.classList.add('hidden');
+    guestNotice.classList.toggle('hidden', hasData || initialLoadPending);
   }
 }
 
 function toggleUploadPanel(forceOpen) {
+  if (!isAdminLoggedIn) return;
   const sec = document.getElementById('uploadSection');
   const bar = document.getElementById('compactDataBar');
   const show = typeof forceOpen === 'boolean' ? forceOpen : sec.classList.contains('hidden');
@@ -1345,7 +1568,7 @@ function toggleUploadPanel(forceOpen) {
     bar.classList.add('hidden');
   } else {
     sec.classList.add('hidden');
-    bar.classList.remove('hidden');
+    if (masterList.length > 0) bar.classList.remove('hidden');
   }
 }
 
@@ -1466,9 +1689,7 @@ function _process() {
   document.getElementById('lastUpdatedPill').classList.remove('hidden');
   document.getElementById('loadedFilesSummary').textContent = `${f1Names.join(' + ')} & ${f2Name}`;
   document.getElementById('exclCountBadge').textContent = exclusions.size;
-  document.getElementById('collapseUploadBtn').classList.remove('hidden');
-  document.getElementById('toggleUploadBtn').classList.remove('hidden');
-  toggleUploadPanel(false);
+  updateAdminUI(false);
 
   renderAllDashboard();
 
@@ -1977,6 +2198,8 @@ const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').re
 // INIT
 // =====================================================================
 renderExclusions();
+updateAdminUI(false);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeAdminModal(); });
 if (window.location.protocol.startsWith('http')) {
   loadSavedDataFolder(true);
 }
