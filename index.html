@@ -867,6 +867,11 @@
         </button>
       </div>
 
+      <!-- Hidden File Inputs kept OUTSIDE clickable drop zones to prevent event bubbling -->
+      <input type="file" id="f1" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',false)">
+      <input type="file" id="f1Add" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',true)">
+      <input type="file" id="f2" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'file2',false)">
+
       <!-- Two Upload Boxes Beside Each Other -->
       <div class="upload-grid">
         <div>
@@ -875,16 +880,19 @@
           </label>
           <div id="zone1" class="upload-zone" onclick="document.getElementById('f1').click()"
                ondragover="drgOver(event,'zone1')" ondragleave="drgLeave('zone1')" ondrop="drgDrop(event,'file1')">
-            <input type="file" id="f1" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',false)">
-            <input type="file" id="f1Add" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',true)">
             <i id="z1ico" class="fa-solid fa-file-excel upload-zone-icon" style="color:#059669;"></i>
             <div class="upload-zone-text" style="flex:1;">
               <p id="z1txt" class="upload-zone-main">Click or drag &amp; drop Private + Public file(s)</p>
-              <p class="upload-zone-sub">Select 1 or 2 files (filters Status = Approved)</p>
+              <p id="z1sub" class="upload-zone-sub">Select 1 or 2 files (filters Status = Approved)</p>
             </div>
-            <button id="addSecondF1Btn" type="button" onclick="event.stopPropagation(); document.getElementById('f1Add').click()" class="btn btn-outline hidden" style="padding:4px 9px; font-size:11px; flex-shrink:0;">
-              <i class="fa-solid fa-plus" style="color:#059669;"></i> Add 2nd File
-            </button>
+            <div id="f1ExtraActions" class="hidden" style="display:flex; gap:5px; flex-shrink:0;" onclick="event.stopPropagation()">
+              <button id="addSecondF1Btn" type="button" onclick="event.stopPropagation(); document.getElementById('f1Add').click()" class="btn btn-outline" style="padding:4px 9px; font-size:11px;">
+                <i class="fa-solid fa-plus" style="color:#059669;"></i> Add 2nd File
+              </button>
+              <button type="button" onclick="event.stopPropagation(); clearFile1()" class="btn btn-danger-soft" title="Clear File 1" style="padding:4px 8px; font-size:11px;">
+                <i class="fa-solid fa-xmark"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -894,7 +902,6 @@
           </label>
           <div id="zone2" class="upload-zone" onclick="document.getElementById('f2').click()"
                ondragover="drgOver(event,'zone2')" ondragleave="drgLeave('zone2')" ondrop="drgDrop(event,'file2')">
-            <input type="file" id="f2" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'file2',false)">
             <i id="z2ico" class="fa-solid fa-file-csv upload-zone-icon" style="color:#1d4ed8;"></i>
             <div class="upload-zone-text">
               <p id="z2txt" class="upload-zone-main">Click or drag &amp; drop File 2</p>
@@ -1191,6 +1198,7 @@
 // =====================================================================
 // STATE
 // =====================================================================
+let f1Files = []; // [{ name, rows }]
 let f1Data = null, f2Data = null;
 let f1Names = [], f2Name = '';
 let masterList = [];
@@ -1226,11 +1234,15 @@ function drgDrop(e, k) {
   e.preventDefault();
   const z = k === 'file1' ? 'zone1' : 'zone2';
   document.getElementById(z).classList.remove('drag-over');
-  if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files, k, false);
+  if (e.dataTransfer.files.length) {
+    const append = k === 'file1' && f1Files.length > 0;
+    loadFiles(e.dataTransfer.files, k, append);
+  }
 }
-function pickFile(e, k, append = false) {
-  if (e.target.files.length) loadFiles(e.target.files, k, append);
+async function pickFile(e, k, append = false) {
+  const picked = Array.from(e.target.files || []);
   e.target.value = '';
+  if (picked.length) await loadFiles(picked, k, append);
 }
 
 function parseBuffer(buf, filename) {
@@ -1244,7 +1256,20 @@ function parseBuffer(buf, filename) {
   return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 }
 
-function markZoneReady(k, displayLabel) {
+function clearFile1() {
+  f1Files = [];
+  f1Data = null;
+  f1Names = [];
+  document.getElementById('z1txt').textContent = 'Click or drag & drop Private + Public file(s)';
+  document.getElementById('z1sub').textContent = 'Select 1 or 2 files (filters Status = Approved)';
+  document.getElementById('z1ico').className = 'fa-solid fa-file-excel upload-zone-icon';
+  document.getElementById('z1ico').style.color = '#059669';
+  document.getElementById('zone1').classList.remove('ready');
+  document.getElementById('f1ExtraActions').classList.add('hidden');
+  document.getElementById('processBtn').disabled = true;
+}
+
+function markZoneReady(k, displayLabel, subLabel = '') {
   const zi = k === 'file1' ? 'z1ico' : 'z2ico';
   const zt = k === 'file1' ? 'z1txt' : 'z2txt';
   const zn = k === 'file1' ? 'zone1' : 'zone2';
@@ -1253,21 +1278,26 @@ function markZoneReady(k, displayLabel) {
   document.getElementById(zi).style.color = '#059669';
   document.getElementById(zn).classList.add('ready');
   if (k === 'file1') {
-    document.getElementById('addSecondF1Btn').classList.remove('hidden');
+    if (subLabel) document.getElementById('z1sub').textContent = subLabel;
+    document.getElementById('f1ExtraActions').classList.remove('hidden');
   }
 }
 
 async function loadFiles(fileList, k, append) {
   const files = Array.from(fileList);
   if (k === 'file1') {
-    if (!append) { f1Data = []; f1Names = []; }
+    if (!append) f1Files = [];
     for (const file of files) {
       const buf = await file.arrayBuffer();
       const rows = parseBuffer(buf, file.name);
-      f1Data = (f1Data || []).concat(rows);
-      if (!f1Names.includes(file.name)) f1Names.push(file.name);
+      const existingIdx = f1Files.findIndex(f => f.name === file.name);
+      if (existingIdx >= 0) f1Files[existingIdx] = { name: file.name, rows };
+      else f1Files.push({ name: file.name, rows });
     }
-    markZoneReady('file1', f1Names.join(' + '));
+    f1Data = f1Files.flatMap(f => f.rows);
+    f1Names = f1Files.map(f => f.name);
+    const sub = f1Files.map(f => `${f.name} (${f.rows.length} rows)`).join(' + ');
+    markZoneReady('file1', `${f1Files.length} file(s): ${f1Names.join(' + ')}`, sub);
   } else {
     const file = files[0];
     const buf = await file.arrayBuffer();
@@ -1287,16 +1317,17 @@ async function loadSavedDataFolder(silent = false) {
     ]);
     if (!r1.ok || !r2.ok) throw new Error('Saved data files not reachable');
     const [b1, b2] = await Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]);
-    f1Data = parseBuffer(b1, 'facility_details.xlsx');
-    f1Names = ['facility_details.xlsx'];
+    f1Files = [{ name: 'facility_details.xlsx', rows: parseBuffer(b1, 'facility_details.xlsx') }];
     if (r1Pub && r1Pub.ok) {
       const bPub = await r1Pub.arrayBuffer();
-      f1Data = f1Data.concat(parseBuffer(bPub, 'public_facility_details.xlsx'));
-      f1Names.push('public_facility_details.xlsx');
+      f1Files.push({ name: 'public_facility_details.xlsx', rows: parseBuffer(bPub, 'public_facility_details.xlsx') });
     }
+    f1Data = f1Files.flatMap(f => f.rows);
+    f1Names = f1Files.map(f => f.name);
     f2Data = parseBuffer(b2, 'ABDM_Enabled_Facilities.csv');
     f2Name = 'ABDM_Enabled_Facilities.csv';
-    markZoneReady('file1', f1Names.join(' + '));
+    const sub = f1Files.map(f => `${f.name} (${f.rows.length} rows)`).join(' + ');
+    markZoneReady('file1', `${f1Files.length} file(s): ${f1Names.join(' + ')}`, sub);
     markZoneReady('file2', f2Name);
     document.getElementById('processBtn').disabled = false;
     processFiles();
