@@ -823,6 +823,15 @@
       background: var(--red-soft); border: 1px solid #fecaca; color: #991b1b;
       font-size: 12px; font-weight: 600; padding: 8px 11px; border-radius: 8px; margin-bottom: 12px;
     }
+    .login-success {
+      background: var(--green-soft); border: 1px solid #a7f3d0; color: #065f46;
+      font-size: 12px; font-weight: 600; padding: 8px 11px; border-radius: 8px; margin-bottom: 12px;
+    }
+    .link-btn {
+      background: none; border: none; padding: 0; font-family: inherit;
+      font-size: 12px; font-weight: 600; color: var(--blue); cursor: pointer;
+    }
+    .link-btn:hover { text-decoration: underline; }
     .session-note {
       background: #eff6ff; border: 1px solid #bfdbfe; color: #1e3a8a;
       border-radius: 8px; padding: 8px 12px; font-size: 11.5px; margin-bottom: 14px;
@@ -924,9 +933,14 @@
           <span class="upload-title-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
           Upload Facility &amp; HMIS Data Files
         </h2>
-        <button id="collapseUploadBtn" type="button" onclick="toggleUploadPanel(false)" class="btn btn-outline hidden" style="padding: 4px 10px; font-size: 11.5px;">
-          <i class="fa-solid fa-chevron-up"></i> Hide
-        </button>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button type="button" onclick="openAdminModal('reset')" class="btn btn-outline" style="padding: 4px 10px; font-size: 11.5px;">
+            <i class="fa-solid fa-key" style="color:var(--blue);"></i> Change Password
+          </button>
+          <button id="collapseUploadBtn" type="button" onclick="toggleUploadPanel(false)" class="btn btn-outline hidden" style="padding: 4px 10px; font-size: 11.5px;">
+            <i class="fa-solid fa-chevron-up"></i> Hide
+          </button>
+        </div>
       </div>
       <div class="session-note">
         <i class="fa-solid fa-circle-info"></i>
@@ -1266,26 +1280,64 @@
     <div class="modal-head">
       <h3 id="adminModalTitle" class="modal-title">
         <i class="fa-solid fa-shield-halved" style="color:var(--blue);"></i>
-        Admin Login
+        <span id="adminModalTitleTxt">Admin Login</span>
       </h3>
       <button type="button" onclick="closeAdminModal()" class="btn btn-outline" style="padding:4px 9px;font-size:11px;">✕</button>
     </div>
-    <form class="modal-body" onsubmit="handleAdminLogin(event)">
+
+    <!-- Sign In View -->
+    <form id="adminLoginForm" class="modal-body" onsubmit="handleAdminLogin(event)">
       <p class="modal-desc">Sign in to upload updated Facility / HMIS Excel or CSV files during meetings or edit Program MIS exclusions.</p>
       <div id="adminLoginErr" class="login-error hidden"></div>
+      <div id="adminLoginMsg" class="login-success hidden"></div>
       <div class="form-group">
         <label class="form-label" for="adminUser">Username</label>
         <input id="adminUser" class="form-input" type="text" autocomplete="username" placeholder="Enter admin username" required>
       </div>
-      <div class="form-group" style="margin-bottom: 16px;">
+      <div class="form-group" style="margin-bottom: 14px;">
         <label class="form-label" for="adminPass">Password</label>
         <input id="adminPass" class="form-input" type="password" autocomplete="current-password" placeholder="Enter password" required>
       </div>
-      <div style="display:flex; justify-content:flex-end; gap:8px;">
-        <button type="button" onclick="closeAdminModal()" class="btn btn-outline">Cancel</button>
-        <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-right-to-bracket"></i> Sign In
-        </button>
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <button type="button" onclick="setAdminModalMode('reset')" class="link-btn">Forgot / Reset Password?</button>
+        <div style="display:flex; gap:8px;">
+          <button type="button" onclick="closeAdminModal()" class="btn btn-outline">Cancel</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <!-- Reset / Change Password View -->
+    <form id="adminResetForm" class="modal-body hidden" onsubmit="handlePasswordReset(event)">
+      <p class="modal-desc">Enter your <strong>current password</strong> or the <strong>Recovery Key</strong> to set a new password (saved in this browser) or restore the default password.</p>
+      <div id="adminResetErr" class="login-error hidden"></div>
+      <div id="adminResetMsg" class="login-success hidden"></div>
+      <div class="form-group">
+        <label class="form-label" for="resetUser">Username</label>
+        <input id="resetUser" class="form-input" type="text" autocomplete="username" placeholder="Enter admin username" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="resetSecret">Current Password or Recovery Key</label>
+        <input id="resetSecret" class="form-input" type="password" placeholder="Current password or recovery key" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="resetNewPass">New Password (min 6 chars)</label>
+        <input id="resetNewPass" class="form-input" type="password" autocomplete="new-password" placeholder="Enter new password" minlength="6" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 14px;">
+        <label class="form-label" for="resetConfirmPass">Confirm New Password</label>
+        <input id="resetConfirmPass" class="form-input" type="password" autocomplete="new-password" placeholder="Re-enter new password" minlength="6" required>
+      </div>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+        <button id="backToLoginBtn" type="button" onclick="setAdminModalMode('login')" class="link-btn">← Back to Login</button>
+        <div style="display:flex; gap:6px; margin-left:auto;">
+          <button type="button" onclick="restoreDefaultPassword()" class="btn btn-outline" title="Requires Username + Recovery Key">Restore Default</button>
+          <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-key"></i> Save Password
+          </button>
+        </div>
       </div>
     </form>
   </div>
@@ -1295,12 +1347,18 @@
 // =====================================================================
 // STATE & ADMIN AUTH CONFIG
 // =====================================================================
-// SHA-256 hashes for default Admin credentials (admin / admin123)
-const ADMIN_USER_HASH = '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918';
-const ADMIN_PASS_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+// SHA-256 hashes for Admin username, default password, and recovery key
+const ADMIN_USER_HASH = 'e9e32339fb2814e981093d286968f9b959ec997be00d26d7466eee41dcc6e263';
+const ADMIN_DEFAULT_PASS_HASH = '8fdfcb9510a2f7b5e01b2192fe405a47f19e57a6a04e5fdd13fa73b6ec8af466';
+const ADMIN_RECOVERY_HASH = 'd9a548bf6f2123fafcfe0bf7b59a202c5e064eae9c6413ef70b7c4c4a716b753';
 const ADMIN_SESSION_KEY = 'abdm_hmis_admin';
+const ADMIN_PASS_STORE_KEY = 'abdm_hmis_admin_pass_hash';
 let isAdminLoggedIn = sessionStorage.getItem(ADMIN_SESSION_KEY) === '1';
 let initialLoadPending = window.location.protocol.startsWith('http');
+
+function getActiveAdminPassHash() {
+  return localStorage.getItem(ADMIN_PASS_STORE_KEY) || ADMIN_DEFAULT_PASS_HASH;
+}
 
 let f1Files = []; // [{ name, rows }]
 let f1Data = null, f2Data = null;
@@ -1490,12 +1548,32 @@ function sha256Hex(ascii) {
   return H.map(x => (x >>> 0).toString(16).padStart(8, '0')).join('');
 }
 
-function openAdminModal() {
+function setAdminModalMode(mode) {
+  const isReset = mode === 'reset';
+  document.getElementById('adminLoginForm').classList.toggle('hidden', isReset);
+  document.getElementById('adminResetForm').classList.toggle('hidden', !isReset);
+  document.getElementById('adminModalTitleTxt').textContent = isReset ? 'Reset / Change Password' : 'Admin Login';
   document.getElementById('adminLoginErr').classList.add('hidden');
-  document.getElementById('adminUser').value = '';
-  document.getElementById('adminPass').value = '';
+  document.getElementById('adminLoginMsg').classList.add('hidden');
+  document.getElementById('adminResetErr').classList.add('hidden');
+  document.getElementById('adminResetMsg').classList.add('hidden');
+  document.getElementById('backToLoginBtn').classList.toggle('hidden', isAdminLoggedIn);
+  if (isReset) {
+    document.getElementById('resetUser').value = '';
+    document.getElementById('resetSecret').value = '';
+    document.getElementById('resetNewPass').value = '';
+    document.getElementById('resetConfirmPass').value = '';
+    setTimeout(() => document.getElementById('resetUser').focus(), 40);
+  } else {
+    document.getElementById('adminUser').value = '';
+    document.getElementById('adminPass').value = '';
+    setTimeout(() => document.getElementById('adminUser').focus(), 40);
+  }
+}
+
+function openAdminModal(mode = 'login') {
   document.getElementById('adminModal').classList.remove('hidden');
-  setTimeout(() => document.getElementById('adminUser').focus(), 40);
+  setAdminModalMode(mode);
 }
 
 function closeAdminModal() {
@@ -1506,7 +1584,7 @@ function handleAdminLogin(e) {
   e.preventDefault();
   const u = document.getElementById('adminUser').value.trim();
   const p = document.getElementById('adminPass').value;
-  if (sha256Hex(u) === ADMIN_USER_HASH && sha256Hex(p) === ADMIN_PASS_HASH) {
+  if (sha256Hex(u) === ADMIN_USER_HASH && sha256Hex(p) === getActiveAdminPassHash()) {
     isAdminLoggedIn = true;
     sessionStorage.setItem(ADMIN_SESSION_KEY, '1');
     closeAdminModal();
@@ -1515,6 +1593,87 @@ function handleAdminLogin(e) {
     const err = document.getElementById('adminLoginErr');
     err.textContent = 'Invalid username or password.';
     err.classList.remove('hidden');
+  }
+}
+
+function handlePasswordReset(e) {
+  e.preventDefault();
+  const err = document.getElementById('adminResetErr');
+  const msg = document.getElementById('adminResetMsg');
+  err.classList.add('hidden');
+  msg.classList.add('hidden');
+
+  const u = document.getElementById('resetUser').value.trim();
+  const secret = document.getElementById('resetSecret').value;
+  const np = document.getElementById('resetNewPass').value;
+  const cp = document.getElementById('resetConfirmPass').value;
+
+  if (sha256Hex(u) !== ADMIN_USER_HASH) {
+    err.textContent = 'Invalid admin username.';
+    err.classList.remove('hidden');
+    return;
+  }
+  const secretHash = sha256Hex(secret);
+  if (secretHash !== getActiveAdminPassHash() && secretHash !== ADMIN_RECOVERY_HASH) {
+    err.textContent = 'Current password or Recovery Key is incorrect.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (np.length < 6) {
+    err.textContent = 'New password must be at least 6 characters.';
+    err.classList.remove('hidden');
+    return;
+  }
+  if (np !== cp) {
+    err.textContent = 'New passwords do not match.';
+    err.classList.remove('hidden');
+    return;
+  }
+
+  localStorage.setItem(ADMIN_PASS_STORE_KEY, sha256Hex(np));
+  if (!isAdminLoggedIn) {
+    setAdminModalMode('login');
+    const loginMsg = document.getElementById('adminLoginMsg');
+    loginMsg.textContent = 'Password updated successfully for this browser. Please sign in.';
+    loginMsg.classList.remove('hidden');
+  } else {
+    msg.textContent = 'Password updated successfully for this browser.';
+    msg.classList.remove('hidden');
+    document.getElementById('resetSecret').value = '';
+    document.getElementById('resetNewPass').value = '';
+    document.getElementById('resetConfirmPass').value = '';
+  }
+}
+
+function restoreDefaultPassword() {
+  const err = document.getElementById('adminResetErr');
+  const msg = document.getElementById('adminResetMsg');
+  err.classList.add('hidden');
+  msg.classList.add('hidden');
+
+  const u = document.getElementById('resetUser').value.trim();
+  const secret = document.getElementById('resetSecret').value;
+  if (sha256Hex(u) !== ADMIN_USER_HASH) {
+    err.textContent = 'Enter your admin username above first.';
+    err.classList.remove('hidden');
+    return;
+  }
+  const secretHash = sha256Hex(secret);
+  if (secretHash !== getActiveAdminPassHash() && secretHash !== ADMIN_RECOVERY_HASH) {
+    err.textContent = 'Enter current password or Recovery Key to restore default.';
+    err.classList.remove('hidden');
+    return;
+  }
+  localStorage.removeItem(ADMIN_PASS_STORE_KEY);
+  if (!isAdminLoggedIn) {
+    setAdminModalMode('login');
+    const loginMsg = document.getElementById('adminLoginMsg');
+    loginMsg.textContent = 'Default password restored for this browser. Please sign in.';
+    loginMsg.classList.remove('hidden');
+  } else {
+    msg.textContent = 'Default password restored for this browser.';
+    msg.classList.remove('hidden');
+    document.getElementById('resetSecret').value = '';
   }
 }
 
