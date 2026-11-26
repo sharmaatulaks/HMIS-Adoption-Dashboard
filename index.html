@@ -1,0 +1,1834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ABDM – HMIS Onboarding Dashboard | DNH &amp; DD</title>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --navy: #0f3c6e;
+      --blue: #1d4ed8;
+      --sky: #0284c7;
+      --green: #059669;
+      --red: #dc2626;
+      --amber: #d97706;
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --muted: #64748b;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    main {
+      flex: 1;
+      width: 100%;
+    }
+
+    .container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 14px;
+    }
+    @media (min-width: 640px) {
+      .container { padding: 0 22px; }
+    }
+
+    .hidden { display: none !important; }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #e2e8f0; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+
+    /* ─── HEADER ─── */
+    .site-header {
+      background: #ffffff;
+      border-bottom: 1px solid #cbd5e1;
+      box-shadow: 0 2px 10px rgba(15, 60, 110, 0.06);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .tricolor-bar {
+      height: 4px;
+      background: linear-gradient(90deg, #f97316 0%, #0284c7 50%, #059669 100%);
+    }
+    .header-inner {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 0;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+    .header-logo {
+      height: 40px;
+      width: 40px;
+      object-fit: contain;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    @media (min-width: 640px) {
+      .header-logo { height: 44px; width: 44px; }
+    }
+    .header-title {
+      color: var(--navy);
+      font-weight: 800;
+      font-size: 16px;
+      line-height: 1.2;
+      margin: 0;
+    }
+    @media (min-width: 640px) {
+      .header-title { font-size: 19px; }
+    }
+    .header-subtitle {
+      color: #475569;
+      font-weight: 500;
+      font-size: 11.5px;
+      margin: 2px 0 0 0;
+    }
+    @media (min-width: 640px) {
+      .header-subtitle { font-size: 12.5px; }
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    @media (max-width: 639px) {
+      .hide-xs { display: none !important; }
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 13px;
+      border-radius: 9px;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn-primary { background: var(--blue); color: #ffffff; }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-success { background: var(--green); color: #ffffff; }
+    .btn-success:hover { background: #047857; }
+    .btn-outline { background: #ffffff; color: #334155; border-color: #cbd5e1; }
+    .btn-outline:hover { background: #f8fafc; border-color: #94a3b8; color: var(--text); }
+    .btn-danger-soft { background: #fef2f2; color: var(--red); border-color: #fecaca; }
+    .btn-danger-soft:hover { background: #fee2e2; }
+
+    /* ─── MAIN STACK ─── */
+    .main-stack {
+      padding-top: 14px;
+      padding-bottom: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .panel-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    }
+
+    /* ─── COMPACT ACTIVE DATA BAR ─── */
+    .compact-bar {
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .compact-bar-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      color: #334155;
+      flex-wrap: wrap;
+    }
+    .dot-green {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #10b981;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    /* ─── UPLOAD SECTION ─── */
+    .upload-section {
+      padding: 14px 16px;
+    }
+    .upload-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .upload-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+    .upload-title-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 7px;
+      background: #eff6ff;
+      color: var(--blue);
+      border: 1px solid #bfdbfe;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* Side-by-side Upload Boxes */
+    .upload-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    @media (min-width: 640px) {
+      .upload-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    .field-label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin-bottom: 6px;
+    }
+    .upload-zone {
+      border: 2px dashed #93c5fd;
+      background: #f8fafc;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--blue);
+      background: #eff6ff;
+    }
+    .upload-zone.ready {
+      border-color: var(--green);
+      background: #f0fdf4;
+      border-style: solid;
+    }
+    .upload-zone-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .upload-zone-text {
+      min-width: 0;
+      text-align: left;
+    }
+    .upload-zone-main {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #1e293b;
+      margin: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .upload-zone-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin: 2px 0 0 0;
+    }
+
+    /* Exclusion Box */
+    .excl-box {
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 12px;
+    }
+    .excl-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .excl-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+      border-radius: 999px;
+      padding: 3px 10px;
+      font-size: 11.5px;
+      font-weight: 600;
+    }
+    .excl-chip button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #991b1b;
+      font-weight: 800;
+      padding: 0;
+      line-height: 1;
+    }
+    .excl-input-row {
+      display: flex;
+      gap: 8px;
+    }
+    .input-text {
+      flex: 1;
+      min-width: 0;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      outline: none;
+      color: var(--text);
+    }
+    .input-text:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.15);
+    }
+    .upload-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ─── LOADING ─── */
+    .loading-box {
+      padding: 28px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .spinner {
+      width: 34px;
+      height: 34px;
+      border: 3.5px solid #cbd5e1;
+      border-top-color: var(--blue);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── KPI CARDS (4 in a row on desktop/tablet, 2x2 on mobile) ─── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    @media (min-width: 768px) {
+      .kpi-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+      }
+    }
+    .kpi-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 13px 15px;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+      border-top: 4px solid var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    }
+    .kpi-card.kpi-blue  { border-top-color: var(--blue); }
+    .kpi-card.kpi-green { border-top-color: var(--green); }
+    .kpi-card.kpi-red   { border-top-color: var(--red); }
+    .kpi-card.kpi-amber { border-top-color: var(--amber); }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin: 0;
+    }
+    .kpi-value {
+      font-size: 24px;
+      font-weight: 800;
+      line-height: 1.15;
+      margin: 4px 0 2px 0;
+    }
+    @media (min-width: 640px) {
+      .kpi-value { font-size: 28px; }
+    }
+    .kpi-sub {
+      font-size: 11px;
+      color: #64748b;
+      margin: 0;
+    }
+    .kpi-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 11px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+    .kpi-icon-blue  { background: #eff6ff; color: var(--blue); }
+    .kpi-icon-green { background: #ecfdf5; color: var(--green); }
+    .kpi-icon-red   { background: #fef2f2; color: var(--red); }
+    .kpi-icon-amber { background: #fffbeb; color: var(--amber); }
+
+    .pct-track {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 5px;
+    }
+    .pct-fill {
+      height: 100%;
+      background: #f59e0b;
+      border-radius: 999px;
+      transition: width 0.6s ease;
+    }
+
+    /* ─── TABS ─── */
+    .dash-card {
+      overflow: hidden;
+    }
+    .tab-nav {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      padding: 10px 14px;
+      background: #f8fafc;
+      border-bottom: 1px solid var(--border);
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-nav::-webkit-scrollbar { height: 0; }
+    .tab-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      padding: 8px 14px;
+      border-radius: 9px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1px solid #e2e8f0;
+      color: #475569;
+      background: #ffffff;
+      transition: all 0.15s ease;
+    }
+    .tab-btn:hover { color: var(--blue); border-color: #93c5fd; background: #eff6ff; }
+    .tab-btn.active { background: var(--navy); color: #ffffff; border-color: var(--navy); box-shadow: 0 2px 6px rgba(15, 60, 110, 0.2); }
+    .tab-pane { display: none; padding: 14px; }
+    @media (min-width: 640px) {
+      .tab-pane { padding: 18px; }
+    }
+    .tab-pane.active { display: block; }
+
+    .pane-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .pane-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+    .pane-sub {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin: 2px 0 0 0;
+    }
+
+    /* District Layout */
+    .district-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      align-items: start;
+    }
+    @media (min-width: 1024px) {
+      .district-grid {
+        grid-template-columns: 7fr 5fr;
+      }
+    }
+    .progress-box {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .progress-box-title {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #334155;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .progress-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* ─── TABLES ─── */
+    .table-scroll {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      -webkit-overflow-scrolling: touch;
+    }
+    .dtable {
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 12.5px;
+    }
+    .dtable thead th {
+      background: var(--navy);
+      color: #ffffff;
+      padding: 9px 11px;
+      font-weight: 700;
+      font-size: 11.5px;
+      white-space: nowrap;
+      border: 1px solid #1e4e87;
+      text-align: center;
+    }
+    .dtable thead th.th-sub   { background: #1e4e87; font-size: 11px; }
+    .dtable thead th.th-green { background: #047857; }
+    .dtable thead th.th-red   { background: #b91c1c; }
+    .dtable thead th.th-amber { background: #b45309; }
+    .dtable thead th.row-th   { text-align: left; }
+
+    .dtable tbody td {
+      padding: 8px 11px;
+      border: 1px solid #e2e8f0;
+      text-align: center;
+      color: #1e293b;
+      background: #ffffff;
+    }
+    .dtable tbody tr:nth-child(even) td { background: #f8fafc; }
+    .dtable tbody tr:hover td { background: #eff6ff; }
+    .dtable tbody td.row-label {
+      text-align: left;
+      font-weight: 600;
+      color: var(--navy);
+      white-space: nowrap;
+      background: #f8fafc;
+    }
+    .sticky-col thead th:first-child,
+    .sticky-col tbody td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      box-shadow: 2px 0 4px rgba(15, 23, 42, 0.06);
+    }
+    .sticky-col thead th:first-child { z-index: 10; }
+
+    .dtable tbody tr.grand-row td {
+      background: #fef3c7 !important;
+      font-weight: 800;
+      border-top: 2px solid #d97706;
+      color: #78350f;
+    }
+    .cell-adopted { color: var(--green); font-weight: 700; }
+    .cell-pending { color: var(--red); font-weight: 700; }
+    .cell-grand   { background: #fef9c3 !important; font-weight: 800; color: #78350f !important; }
+    .clickable-num {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-style: dotted;
+      text-underline-offset: 3px;
+    }
+    .clickable-num:hover { opacity: 0.75; }
+
+    /* Badges */
+    .badge-adopted {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #dcfce7; color: #166534; border: 1px solid #86efac;
+      padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap;
+    }
+    .badge-pending {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5;
+      padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; white-space: nowrap;
+    }
+
+    /* HMIS Progress Bar */
+    .hmis-bar-track {
+      background: #e2e8f0;
+      border-radius: 999px;
+      height: 8px;
+      width: 90px;
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: middle;
+    }
+    .hmis-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--blue), var(--sky));
+    }
+
+    /* ─── SLICERS & LINE LIST ─── */
+    .slicer-panel {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .slicer-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 768px) {
+      .slicer-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    .slicer-box {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 10px;
+    }
+    .slicer-box-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+      font-size: 11px;
+      font-weight: 700;
+      color: #475569;
+      text-transform: uppercase;
+    }
+    .slicer-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      max-height: 92px;
+      overflow-y: auto;
+    }
+    .slicer-chip {
+      display: inline-flex; align-items: center; padding: 4px 10px;
+      border-radius: 999px; font-size: 11.5px; font-weight: 600; cursor: pointer;
+      white-space: nowrap; border: 1.5px solid #cbd5e1; background: #ffffff;
+      color: #475569; transition: all 0.12s; user-select: none;
+    }
+    .slicer-chip.selected { background: var(--blue); color: #ffffff; border-color: var(--blue); }
+    .slicer-chip:hover:not(.selected) { border-color: #93c5fd; background: #eff6ff; color: var(--blue); }
+
+    .ll-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .ll-search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .search-box i {
+      position: absolute;
+      left: 10px;
+      color: #94a3b8;
+      font-size: 12px;
+      pointer-events: none;
+    }
+    .search-box input {
+      padding: 7px 10px 7px 30px;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 12px;
+      width: 230px;
+      outline: none;
+    }
+    .search-box input:focus { border-color: var(--blue); }
+
+    /* Desktop table vs Mobile cards */
+    .desktop-only { display: none; }
+    .mobile-only  { display: flex; flex-direction: column; gap: 10px; }
+    @media (min-width: 768px) {
+      .desktop-only { display: block; }
+      .mobile-only  { display: none; }
+    }
+    .mob-card {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+    }
+
+    /* ─── FOOTER (Only Developed by PMU ABDM, DNH and DD) ─── */
+    .site-footer {
+      background: #ffffff;
+      border-top: 2px solid #cbd5e1;
+      padding: 14px 16px;
+      margin-top: auto;
+      text-align: center;
+    }
+    .footer-brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--navy);
+      margin: 0;
+    }
+    .footer-logo {
+      height: 24px;
+      width: 24px;
+      object-fit: contain;
+      border-radius: 4px;
+    }
+
+    @media (max-width: 639px) {
+      .dtable { font-size: 11.5px; }
+      .dtable thead th, .dtable tbody td { padding: 7px 8px; }
+      .search-box input { width: 100%; }
+    }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #ffffff; }
+      .site-header { position: static; box-shadow: none; }
+      .panel-card { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ HEADER -->
+<header class="site-header no-print">
+  <div class="tricolor-bar"></div>
+  <div class="container">
+    <div class="header-inner">
+      <!-- Left: Small ABDM Logo fitted to text + High-contrast Title -->
+      <div class="brand-group">
+        <img src="./abdm-logo.jpg" alt="ABDM Logo" class="header-logo" onerror="this.style.display='none'">
+        <div style="min-width: 0;">
+          <h1 class="header-title">ABDM – HMIS Onboarding Dashboard</h1>
+          <p class="header-subtitle">U.T. of Dadra and Nagar Haveli and Daman &amp; Diu</p>
+        </div>
+      </div>
+
+      <!-- Right: Actions -->
+      <div class="header-actions">
+        <span id="lastUpdatedPill" class="status-pill hidden hide-xs">
+          <i class="fa-regular fa-clock"></i>
+          <span id="lastUpdatedTxt">—</span>
+        </span>
+        <button id="toggleUploadBtn" onclick="toggleUploadPanel()" class="btn btn-outline hidden">
+          <i class="fa-solid fa-folder-open" style="color:var(--blue);"></i>
+          <span>Files</span>
+        </button>
+        <button onclick="window.print()" class="btn btn-outline">
+          <i class="fa-solid fa-print"></i>
+          <span class="hide-xs">Print</span>
+        </button>
+        <button onclick="exportFullCSV()" class="btn btn-success">
+          <i class="fa-solid fa-file-csv"></i>
+          <span class="hide-xs">Export CSV</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════════════════════ MAIN -->
+<main>
+  <div class="container main-stack">
+
+    <!-- ─── COMPACT DATA STATUS BAR ─── -->
+    <div id="compactDataBar" class="panel-card compact-bar hidden no-print">
+      <div class="compact-bar-info">
+        <span class="dot-green"></span>
+        <span><strong>Active Data:</strong> <span id="loadedFilesSummary">Loaded</span></span>
+        <span class="hide-xs" style="color:#94a3b8;">|</span>
+        <span class="hide-xs" style="color:#64748b;">Excluded Program MIS: <strong id="exclCountBadge">4</strong></span>
+      </div>
+      <button type="button" onclick="toggleUploadPanel(true)" class="btn btn-outline">
+        <i class="fa-solid fa-upload" style="color:var(--blue);"></i> Upload New Files / Edit Exclusions
+      </button>
+    </div>
+
+    <!-- ─── UPLOAD SECTION ─── -->
+    <div id="uploadSection" class="panel-card upload-section no-print">
+      <div class="upload-header">
+        <h2 class="upload-title">
+          <span class="upload-title-icon"><i class="fa-solid fa-cloud-arrow-up"></i></span>
+          Upload Facility &amp; HMIS Data Files
+        </h2>
+        <button id="collapseUploadBtn" type="button" onclick="toggleUploadPanel(false)" class="btn btn-outline hidden" style="padding: 4px 10px; font-size: 11.5px;">
+          <i class="fa-solid fa-chevron-up"></i> Hide
+        </button>
+      </div>
+
+      <!-- Two Upload Boxes Beside Each Other -->
+      <div class="upload-grid">
+        <div>
+          <label class="field-label">
+            <i class="fa-solid fa-file-excel" style="color:#059669;"></i> File 1 — Total Facility Registry (.xlsx / .csv)
+          </label>
+          <div id="zone1" class="upload-zone" onclick="document.getElementById('f1').click()"
+               ondragover="drgOver(event,'zone1')" ondragleave="drgLeave('zone1')" ondrop="drgDrop(event,'file1')">
+            <input type="file" id="f1" class="hidden" accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1')">
+            <i id="z1ico" class="fa-solid fa-file-excel upload-zone-icon" style="color:#059669;"></i>
+            <div class="upload-zone-text">
+              <p id="z1txt" class="upload-zone-main">Click or drag &amp; drop File 1</p>
+              <p class="upload-zone-sub">facility_details.xlsx (filters Status = Approved)</p>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="field-label">
+            <i class="fa-solid fa-file-csv" style="color:#1d4ed8;"></i> File 2 — ABDM Enabled HMIS List (.csv / .xlsx)
+          </label>
+          <div id="zone2" class="upload-zone" onclick="document.getElementById('f2').click()"
+               ondragover="drgOver(event,'zone2')" ondragleave="drgLeave('zone2')" ondrop="drgDrop(event,'file2')">
+            <input type="file" id="f2" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'file2')">
+            <i id="z2ico" class="fa-solid fa-file-csv upload-zone-icon" style="color:#1d4ed8;"></i>
+            <div class="upload-zone-text">
+              <p id="z2txt" class="upload-zone-main">Click or drag &amp; drop File 2</p>
+              <p class="upload-zone-sub">ABDM_Enabled_Facilities.csv</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Program MIS Exclusion List -->
+      <div class="excl-box">
+        <label class="field-label" style="color:#991b1b; margin-bottom:6px;">
+          <i class="fa-solid fa-ban"></i> Program MIS to Exclude (Display Name in File 2)
+        </label>
+        <div id="exclusionChips" class="excl-chips"></div>
+        <div class="excl-input-row">
+          <input type="text" id="exclusionInput" class="input-text" placeholder="Add Display Name to exclude…"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();addExclusion();}">
+          <button type="button" onclick="addExclusion()" class="btn btn-danger-soft">
+            <i class="fa-solid fa-plus"></i> Add
+          </button>
+        </div>
+      </div>
+
+      <div class="upload-actions">
+        <button type="button" onclick="processFiles()" id="processBtn" class="btn btn-primary" style="padding: 9px 18px; font-size: 13px;" disabled>
+          <i class="fa-solid fa-gears"></i> Process &amp; Generate Dashboard
+        </button>
+        <button type="button" onclick="loadSavedDataFolder(false)" class="btn btn-outline" style="padding: 9px 14px;">
+          <i class="fa-solid fa-bolt" style="color:#d97706;"></i> Load Saved Data (data/ folder)
+        </button>
+      </div>
+    </div>
+
+    <!-- ─── LOADING SPINNER (strictly hidden unless processing) ─── -->
+    <div id="loadingBox" class="panel-card loading-box hidden">
+      <div class="spinner"></div>
+      <p style="font-size:13px; font-weight:600; color:#475569; margin:0;">Processing facility records…</p>
+    </div>
+
+    <!-- ─── KPI CARDS (4 side-by-side in same row) ─── -->
+    <div id="kpiSection" class="kpi-grid hidden">
+      <div class="kpi-card kpi-blue">
+        <div>
+          <p class="kpi-label">Total Approved</p>
+          <p id="kpiTotal" class="kpi-value" style="color:#0f172a;">—</p>
+          <p class="kpi-sub">Approved in HFR</p>
+        </div>
+        <div class="kpi-icon kpi-icon-blue"><i class="fa-solid fa-hospital"></i></div>
+      </div>
+
+      <div class="kpi-card kpi-green">
+        <div>
+          <p class="kpi-label">HMIS Adopted</p>
+          <p id="kpiAdopted" class="kpi-value" style="color:#047857;">—</p>
+          <p class="kpi-sub" style="color:#059669; font-weight:600;">ABDM Enabled</p>
+        </div>
+        <div class="kpi-icon kpi-icon-green"><i class="fa-solid fa-circle-check"></i></div>
+      </div>
+
+      <div class="kpi-card kpi-red">
+        <div>
+          <p class="kpi-label">Pending</p>
+          <p id="kpiPending" class="kpi-value" style="color:#dc2626;">—</p>
+          <p class="kpi-sub" style="color:#dc2626; font-weight:600;">Yet to Onboard</p>
+        </div>
+        <div class="kpi-icon kpi-icon-red"><i class="fa-solid fa-clock"></i></div>
+      </div>
+
+      <div class="kpi-card kpi-amber">
+        <div style="flex:1; min-width:0;">
+          <p class="kpi-label">Adoption Rate</p>
+          <p id="kpiRate" class="kpi-value" style="color:#b45309;">—</p>
+          <div class="pct-track"><div id="kpiBarFill" class="pct-fill" style="width:0%;"></div></div>
+        </div>
+        <div class="kpi-icon kpi-icon-amber"><i class="fa-solid fa-chart-pie"></i></div>
+      </div>
+    </div>
+
+    <!-- ─── DASHBOARD TABS ─── -->
+    <div id="dashSection" class="panel-card dash-card hidden">
+      <div class="tab-nav no-print">
+        <button type="button" class="tab-btn active" onclick="switchTab('district', this)">
+          <i class="fa-solid fa-map-location-dot"></i> District Wise
+        </button>
+        <button type="button" class="tab-btn" onclick="switchTab('factype', this)">
+          <i class="fa-solid fa-table-cells"></i> Facility Type × District
+        </button>
+        <button type="button" class="tab-btn" onclick="switchTab('hmis', this)">
+          <i class="fa-solid fa-laptop-medical"></i> HMIS Report
+        </button>
+        <button type="button" class="tab-btn" onclick="switchTab('linelist', this)">
+          <i class="fa-solid fa-list-check"></i> Line List (<span id="tabLineCount">0</span>)
+        </button>
+      </div>
+
+      <!-- TAB 1: DISTRICT WISE -->
+      <div id="tab-district" class="tab-pane active">
+        <div class="pane-header">
+          <div>
+            <h3 class="pane-title">District Wise HMIS Onboarding Status</h3>
+            <p class="pane-sub">Click any Enabled or Pending number to inspect those facilities in Line List</p>
+          </div>
+          <button type="button" onclick="exportDistrictCSV()" class="btn btn-success no-print">
+            <i class="fa-solid fa-download"></i> Export District CSV
+          </button>
+        </div>
+
+        <div class="district-grid">
+          <div class="table-scroll sticky-col">
+            <table class="dtable">
+              <thead>
+                <tr>
+                  <th class="row-th">District</th>
+                  <th>Total Approved</th>
+                  <th class="th-green">Facility is ABDM Enabled</th>
+                  <th class="th-red">Pending</th>
+                  <th class="th-amber">Adoption %</th>
+                </tr>
+              </thead>
+              <tbody id="districtTbody"></tbody>
+            </table>
+          </div>
+
+          <div class="progress-box">
+            <h4 class="progress-box-title">
+              <i class="fa-solid fa-chart-bar" style="color:var(--blue);"></i> District Adoption Progress
+            </h4>
+            <div id="districtBarsContainer" class="progress-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: FACILITY TYPE × DISTRICT -->
+      <div id="tab-factype" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h3 class="pane-title">Facility Type × District Wise Onboarding Matrix</h3>
+            <p class="pane-sub">Click any count to open filtered Line List</p>
+          </div>
+          <button type="button" onclick="exportFacTypeCSV()" class="btn btn-success no-print">
+            <i class="fa-solid fa-download"></i> Export Matrix CSV
+          </button>
+        </div>
+        <div class="table-scroll sticky-col">
+          <table class="dtable" id="factypeTable">
+            <thead id="factypeHead"></thead>
+            <tbody id="factypeTbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 3: HMIS REPORT -->
+      <div id="tab-hmis" class="tab-pane">
+        <div class="pane-header">
+          <div>
+            <h3 class="pane-title">Report by HMIS (Display Name)</h3>
+            <p class="pane-sub">Adopted facilities grouped by HMIS software (excluding Program MIS)</p>
+          </div>
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+            <div id="hmisDistSlicers" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+            <button type="button" onclick="exportHMISCSV()" class="btn btn-success no-print">
+              <i class="fa-solid fa-download"></i> Export HMIS CSV
+            </button>
+          </div>
+        </div>
+        <div class="table-scroll sticky-col">
+          <table class="dtable">
+            <thead>
+              <tr>
+                <th class="row-th">HMIS Name (Display Name)</th>
+                <th class="th-green">Facilities Adopted</th>
+                <th class="th-amber">Share %</th>
+                <th>Visual</th>
+                <th id="hmisD1"></th>
+                <th id="hmisD2"></th>
+                <th id="hmisD3"></th>
+              </tr>
+            </thead>
+            <tbody id="hmisTbody"></tbody>
+          </table>
+        </div>
+        <p id="hmisMultiNote" class="hidden" style="font-size:11.5px; color:#64748b; margin:8px 0 0 0;"></p>
+      </div>
+
+      <!-- TAB 4: LINE LIST -->
+      <div id="tab-linelist" class="tab-pane">
+        <div class="slicer-panel">
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+            <span style="font-size:11.5px; font-weight:700; color:#334155; text-transform:uppercase; display:flex; align-items:center; gap:6px;">
+              <i class="fa-solid fa-sliders" style="color:var(--blue);"></i> Interactive Slicers
+            </span>
+            <button type="button" onclick="clearAllSlicers()" class="no-print" style="background:none; border:none; color:var(--blue); font-size:12px; font-weight:700; cursor:pointer;">
+              <i class="fa-solid fa-rotate-left"></i> Reset All
+            </button>
+          </div>
+
+          <div class="slicer-grid">
+            <div class="slicer-box">
+              <div class="slicer-box-head">
+                <span>Facility Type</span>
+                <button type="button" onclick="clearSlicer('type')" class="no-print" style="background:none; border:none; color:var(--blue); font-size:11px; font-weight:600; cursor:pointer;">All</button>
+              </div>
+              <div id="slicerType" class="slicer-chips"></div>
+            </div>
+
+            <div class="slicer-box">
+              <div class="slicer-box-head">
+                <span>ABDM Status</span>
+                <button type="button" onclick="clearSlicer('status')" class="no-print" style="background:none; border:none; color:var(--blue); font-size:11px; font-weight:600; cursor:pointer;">All</button>
+              </div>
+              <div id="slicerStatus" class="slicer-chips"></div>
+            </div>
+
+            <div class="slicer-box">
+              <div class="slicer-box-head">
+                <span>District</span>
+                <button type="button" onclick="clearSlicer('district')" class="no-print" style="background:none; border:none; color:var(--blue); font-size:11px; font-weight:600; cursor:pointer;">All</button>
+              </div>
+              <div id="slicerDistrict" class="slicer-chips"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ll-toolbar">
+          <p style="font-size:12px; color:#475569; margin:0; font-weight:500;">
+            Showing <strong id="llCount" style="color:#0f172a;">0</strong> of <strong id="llTotal" style="color:#0f172a;">0</strong> facilities
+          </p>
+          <div class="ll-search-wrap">
+            <div class="search-box">
+              <i class="fa-solid fa-search"></i>
+              <input type="text" id="llSearch" oninput="filterLinelist()" placeholder="Search name, ID, HMIS, mobile…">
+            </div>
+            <button type="button" onclick="exportLinelistCSV()" class="btn btn-success no-print">
+              <i class="fa-solid fa-download"></i> Export
+            </button>
+          </div>
+        </div>
+
+        <!-- Desktop Table -->
+        <div class="desktop-only table-scroll" style="max-height: 520px;">
+          <table class="dtable" style="font-size:12px;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th class="row-th">District</th>
+                <th class="row-th">Facility Type</th>
+                <th class="row-th">Facility Id</th>
+                <th class="row-th">Facility Name</th>
+                <th class="row-th">Contact Person</th>
+                <th>Mobile No</th>
+                <th>ABDM Status</th>
+                <th>Date</th>
+                <th class="row-th">Display Name (HMIS)</th>
+              </tr>
+            </thead>
+            <tbody id="llBody"></tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div id="llMobileCards" class="mobile-only"></div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- ══════════════════════════════════════════════════════ FOOTER -->
+<footer class="site-footer">
+  <p class="footer-brand">
+    <img src="./abdm-logo.jpg" alt="ABDM Logo" class="footer-logo" onerror="this.style.display='none'">
+    <span>Developed by: PMU ABDM, DNH and DD</span>
+  </p>
+</footer>
+
+<script>
+// =====================================================================
+// STATE
+// =====================================================================
+let f1Data = null, f2Data = null;
+let f1Name = '', f2Name = '';
+let masterList = [];
+let multiHmisFacilitiesCount = 0;
+let exclusions = new Set(['UWIN', 'UT OF DNH DD PUBLIC HEALTH MANAGEMENT PORTAL', 'PMNDP', 'Nikshay']);
+let slcType = new Set(), slcStatus = new Set(), slcDist = new Set(), hmisDistF = new Set();
+const DISTRICTS = ['DADRA AND NAGAR HAVELI', 'DAMAN', 'DIU'];
+
+// =====================================================================
+// DRAG & DROP / UPLOAD
+// =====================================================================
+function drgOver(e, z) { e.preventDefault(); document.getElementById(z).classList.add('drag-over'); }
+function drgLeave(z) { document.getElementById(z).classList.remove('drag-over'); }
+function drgDrop(e, k) {
+  e.preventDefault();
+  const z = k === 'file1' ? 'zone1' : 'zone2';
+  document.getElementById(z).classList.remove('drag-over');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], k);
+}
+function pickFile(e, k) { if (e.target.files[0]) loadFile(e.target.files[0], k); }
+
+function parseBuffer(buf, filename) {
+  const lower = filename.toLowerCase();
+  if (lower.endsWith('.csv')) {
+    const text = new TextDecoder('utf-8').decode(buf);
+    const wb = XLSX.read(text, { type: 'string' });
+    return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+  }
+  const wb = XLSX.read(buf, { type: 'array' });
+  return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
+}
+
+function markZoneReady(k, filename) {
+  const zi = k === 'file1' ? 'z1ico' : 'z2ico';
+  const zt = k === 'file1' ? 'z1txt' : 'z2txt';
+  const zn = k === 'file1' ? 'zone1' : 'zone2';
+  document.getElementById(zt).textContent = '✅ ' + filename;
+  document.getElementById(zi).className = 'fa-solid fa-circle-check upload-zone-icon';
+  document.getElementById(zi).style.color = '#059669';
+  document.getElementById(zn).classList.add('ready');
+}
+
+function loadFile(file, k) {
+  markZoneReady(k, file.name);
+  const reader = new FileReader();
+  reader.onload = e => {
+    const rows = parseBuffer(e.target.result, file.name);
+    if (k === 'file1') { f1Data = rows; f1Name = file.name; }
+    else { f2Data = rows; f2Name = file.name; }
+    document.getElementById('processBtn').disabled = !(f1Data && f2Data);
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function loadSavedDataFolder(silent = false) {
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch('./data/facility_details.xlsx'),
+      fetch('./data/ABDM_Enabled_Facilities.csv')
+    ]);
+    if (!r1.ok || !r2.ok) throw new Error('Saved data files not reachable');
+    const [b1, b2] = await Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]);
+    f1Data = parseBuffer(b1, 'facility_details.xlsx');
+    f2Data = parseBuffer(b2, 'ABDM_Enabled_Facilities.csv');
+    f1Name = 'facility_details.xlsx';
+    f2Name = 'ABDM_Enabled_Facilities.csv';
+    markZoneReady('file1', f1Name);
+    markZoneReady('file2', f2Name);
+    document.getElementById('processBtn').disabled = false;
+    processFiles();
+  } catch (err) {
+    if (!silent) alert('Auto-load from data/ requires running via Start_Dashboard.bat (localhost). Please drag & drop or select File 1 and File 2 above.');
+  }
+}
+
+function toggleUploadPanel(forceOpen) {
+  const sec = document.getElementById('uploadSection');
+  const bar = document.getElementById('compactDataBar');
+  const show = typeof forceOpen === 'boolean' ? forceOpen : sec.classList.contains('hidden');
+  if (show) {
+    sec.classList.remove('hidden');
+    bar.classList.add('hidden');
+  } else {
+    sec.classList.add('hidden');
+    bar.classList.remove('hidden');
+  }
+}
+
+// =====================================================================
+// EXCLUSIONS
+// =====================================================================
+function renderExclusions() {
+  const c = document.getElementById('exclusionChips');
+  c.innerHTML = '';
+  exclusions.forEach(n => {
+    const d = document.createElement('div');
+    d.className = 'excl-chip';
+    d.innerHTML = `${esc(n)} <button type="button" onclick="removeExcl('${n.replace(/'/g, "\\'")}')">✕</button>`;
+    c.appendChild(d);
+  });
+  const badge = document.getElementById('exclCountBadge');
+  if (badge) badge.textContent = exclusions.size;
+}
+
+function addExclusion() {
+  const v = document.getElementById('exclusionInput').value.trim();
+  if (v) {
+    exclusions.add(v);
+    document.getElementById('exclusionInput').value = '';
+    renderExclusions();
+  }
+}
+
+function removeExcl(n) {
+  exclusions.delete(n);
+  renderExclusions();
+}
+
+// =====================================================================
+// PROCESS
+// =====================================================================
+function processFiles() {
+  document.getElementById('loadingBox').classList.remove('hidden');
+  document.getElementById('kpiSection').classList.add('hidden');
+  document.getElementById('dashSection').classList.add('hidden');
+  setTimeout(() => {
+    try {
+      _process();
+    } catch (err) {
+      alert('Error: ' + err.message);
+      console.error(err);
+    } finally {
+      document.getElementById('loadingBox').classList.add('hidden');
+    }
+  }, 50);
+}
+
+const nid = s => String(s || '').trim().toUpperCase();
+const nd = s => String(s || '').trim().toUpperCase();
+const cs = s => String(s || '').trim();
+
+function _process() {
+  const exclLower = new Set([...exclusions].map(x => x.toLowerCase()));
+
+  // File 1: Approved facilities only
+  const appr = {};
+  for (const r of f1Data) {
+    if (cs(r['Facility Status']).toLowerCase() !== 'approved') continue;
+    const id = nid(r['Facility Id'] || r['Facility ID'] || r['HFR ID'] || r['HFR Id']);
+    if (!id) continue;
+    appr[id] = {
+      hfrId: id,
+      name: cs(r['Facility Name']),
+      district: nd(r['District']),
+      facilityType: cs(r['Facility Type']),
+      contactPerson: cs(r['Facility Contact Person Name']),
+      contactMobile: cs(r['Facility Contact Person Mobile No'])
+    };
+  }
+
+  // File 2: Filter out excluded Display Names (Program MIS)
+  const hmisMap = {};
+  for (const r of f2Data) {
+    const dn = cs(r['Display Name']);
+    if (!dn || exclLower.has(dn.toLowerCase())) continue;
+    const id = nid(r['Facility ID'] || r['Facility Id'] || r['HFR ID']);
+    if (!id) continue;
+    if (!hmisMap[id]) hmisMap[id] = { names: [], dates: [] };
+    if (!hmisMap[id].names.includes(dn)) hmisMap[id].names.push(dn);
+    const dt = cs(r['Date']);
+    if (dt) hmisMap[id].dates.push(dt);
+  }
+
+  // Merge by HFR ID
+  masterList = [];
+  multiHmisFacilitiesCount = 0;
+  for (const [id, fac] of Object.entries(appr)) {
+    const h = hmisMap[id];
+    if (h && h.names.length > 1) multiHmisFacilitiesCount++;
+    const latestDate = h && h.dates.length ? [...h.dates].sort().pop() : '';
+    masterList.push({
+      ...fac,
+      status: h ? 'Facility is ABDM Enabled' : 'Pending',
+      hmisNames: h ? h.names : [],
+      hmisName: h ? h.names.join(', ') : '(blank)',
+      hmisDate: latestDate
+    });
+  }
+
+  // Update timestamp & compact bar
+  const now = new Date();
+  document.getElementById('lastUpdatedTxt').textContent = now.toLocaleString('en-IN');
+  document.getElementById('lastUpdatedPill').classList.remove('hidden');
+  document.getElementById('loadedFilesSummary').textContent = `${f1Name} & ${f2Name}`;
+  document.getElementById('exclCountBadge').textContent = exclusions.size;
+  document.getElementById('collapseUploadBtn').classList.remove('hidden');
+  document.getElementById('toggleUploadBtn').classList.remove('hidden');
+  toggleUploadPanel(false);
+
+  // Render Dashboard
+  renderKPIs();
+  renderDistrict();
+  renderFacType();
+  renderHMIS();
+  buildSlicers();
+  filterLinelist();
+
+  document.getElementById('kpiSection').classList.remove('hidden');
+  document.getElementById('dashSection').classList.remove('hidden');
+}
+
+// =====================================================================
+// KPI
+// =====================================================================
+function renderKPIs() {
+  const tot = masterList.length;
+  const adp = masterList.filter(r => r.status === 'Facility is ABDM Enabled').length;
+  const pnd = tot - adp;
+  const pct = tot > 0 ? ((adp / tot) * 100).toFixed(2) : '0.00';
+  document.getElementById('kpiTotal').textContent = tot;
+  document.getElementById('kpiAdopted').textContent = adp;
+  document.getElementById('kpiPending').textContent = pnd;
+  document.getElementById('kpiRate').textContent = pct + '%';
+  document.getElementById('tabLineCount').textContent = tot;
+  setTimeout(() => { document.getElementById('kpiBarFill').style.width = pct + '%'; }, 80);
+}
+
+// =====================================================================
+// DISTRICT TABLE + PROGRESS BARS
+// =====================================================================
+function renderDistrict() {
+  const tb = document.getElementById('districtTbody');
+  const bars = document.getElementById('districtBarsContainer');
+  tb.innerHTML = '';
+  bars.innerHTML = '';
+  let gT = 0, gA = 0, gP = 0;
+
+  for (const dist of DISTRICTS) {
+    const rows = masterList.filter(r => r.district === dist);
+    const tot = rows.length;
+    const adp = rows.filter(r => r.status === 'Facility is ABDM Enabled').length;
+    const pnd = tot - adp;
+    gT += tot; gA += adp; gP += pnd;
+    const pctNum = tot > 0 ? (adp / tot) * 100 : 0;
+    const pct = tot > 0 ? pctNum.toFixed(2) + '%' : '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="row-label">${tc(dist)}</td>
+      <td style="font-weight:700;">${tot}</td>
+      <td class="cell-adopted"><span class="clickable-num" onclick="drillDown('${dist}', '', 'Facility is ABDM Enabled')">${adp}</span></td>
+      <td class="${pnd > 0 ? 'cell-pending' : 'cell-adopted'}"><span class="clickable-num" onclick="drillDown('${dist}', '', 'Pending')">${pnd}</span></td>
+      <td><span style="font-weight:800; color:${pnd === 0 ? '#059669' : '#b45309'};">${pct}</span></td>`;
+    tb.appendChild(tr);
+
+    const barColor = pctNum >= 99 ? '#10b981' : (pctNum >= 90 ? '#2563eb' : '#f59e0b');
+    const card = document.createElement('div');
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; font-size:12px; margin-bottom:5px;">
+        <span style="font-weight:700; color:#334155;">${tc(dist)}</span>
+        <span style="font-weight:700; color:#0f172a;">${adp}/${tot} <span style="color:#64748b; font-weight:500;">(${pct})</span></span>
+      </div>
+      <div style="width:100%; height:9px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
+        <div style="width:${pctNum.toFixed(1)}%; height:100%; background:${barColor}; border-radius:999px; transition:width 0.5s ease;"></div>
+      </div>`;
+    bars.appendChild(card);
+  }
+
+  const pctG = gT > 0 ? ((gA / gT) * 100).toFixed(2) + '%' : '—';
+  const tr = document.createElement('tr');
+  tr.className = 'grand-row';
+  tr.innerHTML = `
+    <td class="row-label">Grand Total</td>
+    <td>${gT}</td>
+    <td class="cell-adopted">${gA}</td>
+    <td class="${gP > 0 ? 'cell-pending' : 'cell-adopted'}">${gP}</td>
+    <td>${pctG}</td>`;
+  tb.appendChild(tr);
+}
+
+// =====================================================================
+// FACILITY TYPE × DISTRICT TABLE
+// =====================================================================
+function renderFacType() {
+  const types = [...new Set(masterList.map(r => r.facilityType))].filter(Boolean).sort();
+  const thead = document.getElementById('factypeHead');
+  const tbody = document.getElementById('factypeTbody');
+
+  thead.innerHTML = `
+    <tr>
+      <th class="row-th" rowspan="2">Facility Type</th>
+      ${DISTRICTS.map(d => `<th class="th-sub" colspan="3">${tc(d)}</th>`).join('')}
+      <th class="th-sub" colspan="3">U.T of DNH &amp; DD</th>
+      <th class="th-amber" rowspan="2">Grand Total</th>
+    </tr>
+    <tr>
+      ${DISTRICTS.map(() => `<th style="font-size:10.5px;">Total</th><th class="th-green" style="font-size:10.5px;">Enabled</th><th class="th-red" style="font-size:10.5px;">Pending</th>`).join('')}
+      <th style="font-size:10.5px;">Total</th><th class="th-green" style="font-size:10.5px;">Enabled</th><th class="th-red" style="font-size:10.5px;">Pending</th>
+    </tr>`;
+
+  const colA = {}, colP = {}, colT = {};
+  DISTRICTS.forEach(d => { colA[d] = 0; colP[d] = 0; colT[d] = 0; });
+  let utA = 0, utP = 0, utT = 0;
+  tbody.innerHTML = '';
+
+  for (const ft of types) {
+    const tRows = masterList.filter(r => r.facilityType === ft);
+    let rA = 0, rP = 0;
+    let cells = '';
+    const safeFt = ft.replace(/'/g, "\\'");
+    for (const dist of DISTRICTS) {
+      const sub = tRows.filter(r => r.district === dist);
+      const a = sub.filter(r => r.status === 'Facility is ABDM Enabled').length;
+      const t = sub.length;
+      const p = t - a;
+      colA[dist] += a; colP[dist] += p; colT[dist] += t;
+      rA += a; rP += p;
+      cells += `<td style="font-weight:600;">${t}</td>
+        <td class="cell-adopted">${a > 0 ? `<span class="clickable-num" onclick="drillDown('${dist}','${safeFt}','Facility is ABDM Enabled')">${a}</span>` : 0}</td>
+        <td class="${p > 0 ? 'cell-pending' : ''}">${p > 0 ? `<span class="clickable-num" onclick="drillDown('${dist}','${safeFt}','Pending')">${p}</span>` : 0}</td>`;
+    }
+    const rT = rA + rP;
+    utA += rA; utP += rP; utT += rT;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="row-label">${esc(ft)}</td>${cells}
+      <td style="font-weight:600;">${rT}</td>
+      <td class="cell-adopted">${rA > 0 ? `<span class="clickable-num" onclick="drillDown('','${safeFt}','Facility is ABDM Enabled')">${rA}</span>` : 0}</td>
+      <td class="${rP > 0 ? 'cell-pending' : ''}">${rP > 0 ? `<span class="clickable-num" onclick="drillDown('','${safeFt}','Pending')">${rP}</span>` : 0}</td>
+      <td class="cell-grand">${rT}</td>`;
+    tbody.appendChild(tr);
+  }
+
+  const gtCells = DISTRICTS.map(d => `<td style="font-weight:700;">${colT[d]}</td><td class="cell-adopted">${colA[d]}</td><td class="${colP[d] > 0 ? 'cell-pending' : ''}">${colP[d]}</td>`).join('');
+  const tr = document.createElement('tr');
+  tr.className = 'grand-row';
+  tr.innerHTML = `<td class="row-label">Grand Total</td>${gtCells}<td style="font-weight:700;">${utT}</td><td class="cell-adopted">${utA}</td><td class="${utP > 0 ? 'cell-pending' : ''}">${utP}</td><td class="cell-grand">${utT}</td>`;
+  tbody.appendChild(tr);
+}
+
+// =====================================================================
+// HMIS REPORT
+// =====================================================================
+function renderHMIS() {
+  DISTRICTS.forEach((d, i) => {
+    const el = document.getElementById(`hmisD${i + 1}`);
+    if (el) el.textContent = tc(d);
+  });
+
+  const sc = document.getElementById('hmisDistSlicers');
+  sc.innerHTML = '';
+  ['All', ...DISTRICTS].forEach(d => {
+    const ch = document.createElement('div');
+    ch.className = 'slicer-chip' + ((d === 'All' && hmisDistF.size === 0) || hmisDistF.has(d) ? ' selected' : '');
+    ch.textContent = d === 'All' ? 'All Districts' : tc(d);
+    ch.onclick = () => {
+      if (d === 'All') { hmisDistF.clear(); }
+      else {
+        hmisDistF.has(d) ? hmisDistF.delete(d) : hmisDistF.add(d);
+        if (hmisDistF.size === DISTRICTS.length) hmisDistF.clear();
+      }
+      renderHMIS();
+    };
+    sc.appendChild(ch);
+  });
+
+  const filtered = hmisDistF.size === 0
+    ? masterList.filter(r => r.status === 'Facility is ABDM Enabled')
+    : masterList.filter(r => r.status === 'Facility is ABDM Enabled' && hmisDistF.has(r.district));
+
+  const cm = {}, dm = {};
+  for (const r of filtered) {
+    const names = r.hmisNames && r.hmisNames.length ? r.hmisNames : ['(blank)'];
+    for (const h of names) {
+      cm[h] = (cm[h] || 0) + 1;
+      if (!dm[h]) dm[h] = {};
+      dm[h][r.district] = (dm[h][r.district] || 0) + 1;
+    }
+  }
+
+  const totalUnique = filtered.length;
+  const sorted = Object.entries(cm).sort((a, b) => b[1] - a[1]);
+  const tb = document.getElementById('hmisTbody');
+  tb.innerHTML = '';
+  const mx = sorted.length > 0 ? sorted[0][1] : 1;
+
+  sorted.forEach(([h, cnt]) => {
+    const pct = totalUnique > 0 ? ((cnt / totalUnique) * 100).toFixed(1) + '%' : '0%';
+    const dCells = DISTRICTS.map(d => `<td>${dm[h]?.[d] || 0}</td>`).join('');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="row-label" style="font-size:12px;">${esc(h)}</td>
+      <td class="cell-adopted"><span class="clickable-num" onclick="drillDownHMIS('${h.replace(/'/g, "\\'")}')">${cnt}</span></td>
+      <td style="font-weight:600; color:#b45309;">${pct}</td>
+      <td><div class="hmis-bar-track"><div class="hmis-bar-fill" style="width:${Math.round((cnt / mx) * 100)}%"></div></div></td>
+      ${dCells}`;
+    tb.appendChild(tr);
+  });
+
+  const dT = DISTRICTS.map(d => `<td style="font-weight:700;">${filtered.filter(r => r.district === d).length}</td>`).join('');
+  const tr = document.createElement('tr');
+  tr.className = 'grand-row';
+  tr.innerHTML = `<td class="row-label">Unique Facilities Adopted</td><td style="font-weight:800;">${totalUnique}</td><td style="font-weight:700;">100%</td><td></td>${dT}`;
+  tb.appendChild(tr);
+
+  const noteEl = document.getElementById('hmisMultiNote');
+  if (multiHmisFacilitiesCount > 0) {
+    noteEl.textContent = `* Note: ${multiHmisFacilitiesCount} approved facilities have adopted more than one HMIS software, so individual HMIS counts may sum higher than unique facilities (${totalUnique}).`;
+    noteEl.classList.remove('hidden');
+  } else {
+    noteEl.classList.add('hidden');
+  }
+}
+
+// =====================================================================
+// DRILL-DOWN TO LINE LIST
+// =====================================================================
+function drillDown(district, facilityType, status) {
+  slcDist.clear(); slcType.clear(); slcStatus.clear();
+  if (district) slcDist.add(district);
+  if (facilityType) slcType.add(facilityType);
+  if (status) slcStatus.add(status);
+  document.getElementById('llSearch').value = '';
+  buildSlicers();
+  filterLinelist();
+  const btn = document.querySelectorAll('.tab-btn')[3];
+  switchTab('linelist', btn);
+}
+
+function drillDownHMIS(hmisName) {
+  slcDist.clear(); slcType.clear(); slcStatus.clear();
+  hmisDistF.forEach(d => slcDist.add(d));
+  slcStatus.add('Facility is ABDM Enabled');
+  document.getElementById('llSearch').value = hmisName;
+  buildSlicers();
+  filterLinelist();
+  const btn = document.querySelectorAll('.tab-btn')[3];
+  switchTab('linelist', btn);
+}
+
+// =====================================================================
+// SLICERS & LINE LIST
+// =====================================================================
+function buildSlicers() {
+  const types = [...new Set(masterList.map(r => r.facilityType))].sort();
+  const statuses = ['Facility is ABDM Enabled', 'Pending'];
+  buildChips('slicerType', types, slcType, 'type');
+  buildChips('slicerStatus', statuses, slcStatus, 'status');
+  buildChips('slicerDistrict', DISTRICTS.map(tc), slcDist, 'district');
+}
+
+function buildChips(cid, opts, sel, key) {
+  const c = document.getElementById(cid);
+  c.innerHTML = '';
+  opts.forEach(opt => {
+    const rawVal = key === 'district' ? opt.toUpperCase() : opt;
+    const ch = document.createElement('div');
+    const isSelected = sel.size === 0 || sel.has(rawVal);
+    ch.className = 'slicer-chip' + (isSelected ? ' selected' : '');
+    ch.textContent = opt;
+    ch.onclick = () => {
+      if (sel.size === 0) sel.add(rawVal);
+      else if (sel.has(rawVal)) sel.delete(rawVal);
+      else sel.add(rawVal);
+      buildChips(cid, opts, sel, key);
+      filterLinelist();
+    };
+    c.appendChild(ch);
+  });
+}
+
+function clearSlicer(key) {
+  if (key === 'type') { slcType.clear(); buildChips('slicerType', [...new Set(masterList.map(r => r.facilityType))].sort(), slcType, 'type'); }
+  if (key === 'status') { slcStatus.clear(); buildChips('slicerStatus', ['Facility is ABDM Enabled', 'Pending'], slcStatus, 'status'); }
+  if (key === 'district') { slcDist.clear(); buildChips('slicerDistrict', DISTRICTS.map(tc), slcDist, 'district'); }
+  filterLinelist();
+}
+
+function clearAllSlicers() {
+  slcType.clear(); slcStatus.clear(); slcDist.clear();
+  document.getElementById('llSearch').value = '';
+  buildSlicers();
+  filterLinelist();
+}
+
+function getFilteredLinelist() {
+  const q = (document.getElementById('llSearch')?.value || '').toLowerCase();
+  return masterList.filter(r => {
+    const tM = slcType.size === 0 || slcType.has(r.facilityType);
+    const sM = slcStatus.size === 0 || slcStatus.has(r.status);
+    const dM = slcDist.size === 0 || slcDist.has(r.district) || slcDist.has(tc(r.district));
+    const qM = !q || r.name.toLowerCase().includes(q) || r.hfrId.toLowerCase().includes(q) || r.hmisName.toLowerCase().includes(q) || r.contactMobile.toLowerCase().includes(q);
+    return tM && sM && dM && qM;
+  });
+}
+
+function filterLinelist() {
+  const rows = getFilteredLinelist();
+  document.getElementById('llCount').textContent = rows.length;
+  document.getElementById('llTotal').textContent = masterList.length;
+
+  const tb = document.getElementById('llBody');
+  const mob = document.getElementById('llMobileCards');
+  tb.innerHTML = '';
+  mob.innerHTML = '';
+
+  if (!rows.length) {
+    tb.innerHTML = `<tr><td colspan="10" style="padding:32px; color:#94a3b8; font-weight:600; text-align:center;">No records match the selected filters.</td></tr>`;
+    mob.innerHTML = `<div class="mob-card" style="text-align:center; color:#94a3b8; font-weight:600; padding:24px;">No records match the selected filters.</div>`;
+    return;
+  }
+
+  const fragTable = document.createDocumentFragment();
+  const fragMob = document.createDocumentFragment();
+
+  rows.forEach((r, i) => {
+    const badge = r.status === 'Facility is ABDM Enabled'
+      ? `<span class="badge-adopted"><i class="fa-solid fa-check"></i>ABDM Enabled</span>`
+      : `<span class="badge-pending"><i class="fa-solid fa-clock"></i>Pending</span>`;
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="color:#94a3b8;">${i + 1}</td>
+      <td class="row-label">${esc(tc(r.district))}</td>
+      <td style="text-align:left;">${esc(r.facilityType)}</td>
+      <td style="font-family:monospace; font-size:11.5px; color:#1d4ed8;">${esc(r.hfrId)}</td>
+      <td style="text-align:left; font-weight:600;">${esc(r.name)}</td>
+      <td style="text-align:left;">${esc(r.contactPerson || '—')}</td>
+      <td style="font-family:monospace; font-size:11.5px;">${r.contactMobile ? `<a href="tel:${esc(r.contactMobile)}" style="color:#1d4ed8; text-decoration:none;">${esc(r.contactMobile)}</a>` : '—'}</td>
+      <td>${badge}</td>
+      <td style="font-size:11.5px; color:#64748b; white-space:nowrap;">${esc(r.hmisDate || '(blank)')}</td>
+      <td style="font-size:11.5px; color:#334155; font-weight:500; text-align:left;">${esc(r.hmisName)}</td>`;
+    fragTable.appendChild(tr);
+
+    const card = document.createElement('div');
+    card.className = 'mob-card';
+    card.innerHTML = `
+      <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px;">
+        <div style="min-width:0;">
+          <p style="font-size:13.5px; font-weight:700; color:#0f172a; margin:0; line-height:1.3;">${esc(r.name)}</p>
+          <p style="font-size:11px; font-family:monospace; color:#1d4ed8; margin:3px 0 0 0;">${esc(r.hfrId)} &bull; ${esc(tc(r.district))}</p>
+        </div>
+        ${badge}
+      </div>
+      <div style="font-size:12px; color:#475569; border-top:1px solid #f1f5f9; padding-top:8px; display:flex; flex-direction:column; gap:4px;">
+        <div><span style="color:#94a3b8;">Type:</span> <strong>${esc(r.facilityType)}</strong></div>
+        <div><span style="color:#94a3b8;">HMIS:</span> <strong style="color:#0f172a;">${esc(r.hmisName)}</strong> ${r.hmisDate ? `<span style="color:#94a3b8;">(${esc(r.hmisDate)})</span>` : ''}</div>
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-top:2px;">
+          <span><span style="color:#94a3b8;">Contact:</span> ${esc(r.contactPerson || '—')}</span>
+          ${r.contactMobile ? `<a href="tel:${esc(r.contactMobile)}" style="display:inline-flex; align-items:center; gap:5px; background:#eff6ff; color:#1d4ed8; padding:4px 9px; border-radius:7px; font-family:monospace; font-weight:600; font-size:11.5px; text-decoration:none;"><i class="fa-solid fa-phone" style="font-size:10px;"></i>${esc(r.contactMobile)}</a>` : ''}
+        </div>
+      </div>`;
+    fragMob.appendChild(card);
+  });
+
+  tb.appendChild(fragTable);
+  mob.appendChild(fragMob);
+}
+
+// =====================================================================
+// EXPORTS
+// =====================================================================
+function exportFullCSV() {
+  if (!masterList.length) return alert('Process files first.');
+  dl(masterList.map(r => ({
+    'Facility Id': r.hfrId, 'Facility Name': r.name, 'District': tc(r.district),
+    'Facility Type': r.facilityType, 'ABDM Status': r.status, 'Display Name': r.hmisName,
+    'Date': r.hmisDate || '(blank)', 'Contact Person': r.contactPerson, 'Mobile No': r.contactMobile
+  })), 'ABDM_HMIS_Full_Report.csv');
+}
+
+function exportDistrictCSV() {
+  if (!masterList.length) return;
+  const data = DISTRICTS.map(d => {
+    const rows = masterList.filter(r => r.district === d), tot = rows.length,
+      adp = rows.filter(r => r.status === 'Facility is ABDM Enabled').length, pnd = tot - adp,
+      pct = tot > 0 ? ((adp / tot) * 100).toFixed(2) + '%' : '—';
+    return { 'District': tc(d), 'Total Approved': tot, 'ABDM Enabled': adp, 'Pending': pnd, 'Adoption %': pct };
+  });
+  dl(data, 'District_Wise_Report.csv');
+}
+
+function exportFacTypeCSV() {
+  if (!masterList.length) return;
+  const types = [...new Set(masterList.map(r => r.facilityType))].sort();
+  const data = types.map(ft => {
+    const obj = { 'Facility Type': ft };
+    DISTRICTS.forEach(d => {
+      const sub = masterList.filter(r => r.facilityType === ft && r.district === d);
+      const a = sub.filter(r => r.status === 'Facility is ABDM Enabled').length;
+      obj[tc(d) + ' Total'] = sub.length;
+      obj[tc(d) + ' Enabled'] = a;
+      obj[tc(d) + ' Pending'] = sub.length - a;
+    });
+    return obj;
+  });
+  dl(data, 'FacilityType_District_Report.csv');
+}
+
+function exportHMISCSV() {
+  if (!masterList.length) return;
+  const adp = masterList.filter(r => r.status === 'Facility is ABDM Enabled');
+  const tot = adp.length, cm = {}, dm = {};
+  for (const r of adp) {
+    const names = r.hmisNames && r.hmisNames.length ? r.hmisNames : ['(blank)'];
+    for (const h of names) {
+      cm[h] = (cm[h] || 0) + 1;
+      if (!dm[h]) dm[h] = {};
+      dm[h][r.district] = (dm[h][r.district] || 0) + 1;
+    }
+  }
+  const data = Object.entries(cm).sort((a, b) => b[1] - a[1]).map(([h, c]) => {
+    const o = { 'HMIS Name': h, 'Facilities Adopted': c, 'Share %': tot > 0 ? ((c / tot) * 100).toFixed(2) + '%' : '0%' };
+    DISTRICTS.forEach(d => { o[tc(d)] = dm[h]?.[d] || 0; });
+    return o;
+  });
+  dl(data, 'HMIS_Report.csv');
+}
+
+function exportLinelistCSV() {
+  if (!masterList.length) return;
+  const rows = getFilteredLinelist();
+  dl(rows.map(r => ({
+    'District': tc(r.district), 'Facility Type': r.facilityType, 'Facility Id': r.hfrId,
+    'Facility Name': r.name, 'Contact Person': r.contactPerson, 'Mobile No': r.contactMobile,
+    'ABDM Status': r.status, 'Date': r.hmisDate || '(blank)', 'Display Name': r.hmisName
+  })), 'Filtered_Linelist.csv');
+}
+
+function dl(data, fname) {
+  if (!data.length) return;
+  const hs = Object.keys(data[0]);
+  const csv = [hs.join(','), ...data.map(r => hs.map(h => `"${String(r[h] ?? '').replace(/"/g, '""')}"`).join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = fname;
+  a.click();
+}
+
+// =====================================================================
+// TAB SWITCH & UTILS
+// =====================================================================
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(e => e.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+const tc = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+// =====================================================================
+// INIT
+// =====================================================================
+renderExclusions();
+if (window.location.protocol.startsWith('http')) {
+  loadSavedDataFolder(true);
+}
+</script>
+</body>
+</html>
