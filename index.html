@@ -1092,7 +1092,7 @@
             <i id="z3ico" class="fa-solid fa-qrcode upload-zone-icon" style="color:#0284c7;"></i>
             <div class="upload-zone-text" style="flex:1;">
               <p id="z3txt" class="upload-zone-main">Click or drag &amp; drop Scan &amp; Share file</p>
-              <p id="z3sub" class="upload-zone-sub">scan_and_share.csv / .xlsx (Date-wise Count)</p>
+              <p id="z3sub" class="upload-zone-sub">Scan and Share_details.csv / .xlsx (Date-wise Count)</p>
             </div>
             <button id="clearSnsBtn" type="button" onclick="event.stopPropagation(); clearActivityFile('sns')" class="btn btn-danger-soft hidden" title="Clear Scan & Share file" style="padding:4px 8px; font-size:11px; flex-shrink:0;">
               <i class="fa-solid fa-xmark"></i>
@@ -1109,7 +1109,7 @@
             <i id="z4ico" class="fa-solid fa-link upload-zone-icon" style="color:#059669;"></i>
             <div class="upload-zone-text" style="flex:1;">
               <p id="z4txt" class="upload-zone-main">Click or drag &amp; drop HRL Linked file</p>
-              <p id="z4sub" class="upload-zone-sub">hrl_linked.csv / .xlsx (Date-wise Count)</p>
+              <p id="z4sub" class="upload-zone-sub">Health Records Linked_details.csv / .xlsx (Date-wise Count)</p>
             </div>
             <button id="clearHrlBtn" type="button" onclick="event.stopPropagation(); clearActivityFile('hrl')" class="btn btn-danger-soft hidden" title="Clear HRL file" style="padding:4px 8px; font-size:11px; flex-shrink:0;">
               <i class="fa-solid fa-xmark"></i>
@@ -1386,7 +1386,7 @@
         <div style="font-size:28px; color:var(--blue); margin-bottom:8px;"><i class="fa-solid fa-qrcode"></i></div>
         <h2 style="margin:0 0 6px; font-size:16px; font-weight:800; color:var(--navy);">Scan &amp; Share and HRL Activity Report</h2>
         <p style="margin:0 auto 14px; max-width:560px; font-size:12.5px; color:var(--muted); line-height:1.55;">
-          No Scan &amp; Share or HRL activity files are currently loaded. Admin can upload <code>scan_and_share.csv</code> / <code>hrl_linked.csv</code> (or <code>.xlsx</code>) or add them to the <code>data/</code> folder for auto-loading.
+          No Scan &amp; Share or HRL activity files are currently loaded. Admin can upload <code>Scan and Share_details.csv</code> / <code>Health Records Linked_details.csv</code> (or <code>.xlsx</code>) or add them to the <code>data/</code> folder for auto-loading.
         </p>
         <div style="display:inline-flex; gap:8px; flex-wrap:wrap; justify-content:center;">
           <button id="p2AdminUploadBtn" type="button" onclick="toggleUploadPanel(true)" class="btn btn-primary hidden">
@@ -1791,7 +1791,7 @@ async function pickFile(e, k, append = false) {
 function parseBuffer(buf, filename) {
   const lower = filename.toLowerCase();
   if (lower.endsWith('.csv')) {
-    const text = new TextDecoder('utf-8').decode(buf);
+    const text = new TextDecoder('utf-8').decode(buf).replace(/^\uFEFF/, '');
     const wb = XLSX.read(text, { type: 'string' });
     return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
   }
@@ -1816,7 +1816,7 @@ function clearActivityFile(kind) {
   if (kind === 'sns') {
     snsRaw = null; snsName = ''; snsEvents = []; snsSkippedRows = 0;
     document.getElementById('z3txt').textContent = 'Click or drag & drop Scan & Share file';
-    document.getElementById('z3sub').textContent = 'scan_and_share.csv / .xlsx (Date-wise Count)';
+    document.getElementById('z3sub').textContent = 'Scan and Share_details.csv / .xlsx (Date-wise Count)';
     document.getElementById('z3ico').className = 'fa-solid fa-qrcode upload-zone-icon';
     document.getElementById('z3ico').style.color = '#0284c7';
     document.getElementById('zone3').classList.remove('ready');
@@ -1824,7 +1824,7 @@ function clearActivityFile(kind) {
   } else {
     hrlRaw = null; hrlName = ''; hrlEvents = []; hrlSkippedRows = 0;
     document.getElementById('z4txt').textContent = 'Click or drag & drop HRL Linked file';
-    document.getElementById('z4sub').textContent = 'hrl_linked.csv / .xlsx (Date-wise Count)';
+    document.getElementById('z4sub').textContent = 'Health Records Linked_details.csv / .xlsx (Date-wise Count)';
     document.getElementById('z4ico').className = 'fa-solid fa-link upload-zone-icon';
     document.getElementById('z4ico').style.color = '#059669';
     document.getElementById('zone4').classList.remove('ready');
@@ -1893,7 +1893,7 @@ async function loadFiles(fileList, k, append) {
 async function fetchFirstExisting(paths) {
   for (const url of paths) {
     try {
-      const res = await fetch(url);
+      const res = await fetch(encodeURI(url));
       if (res.ok) return { name: url.split('/').pop(), buf: await res.arrayBuffer() };
     } catch (_) { /* ignore missing optional file */ }
   }
@@ -1906,8 +1906,18 @@ async function loadSavedDataFolder(silent = false) {
       fetch('./data/facility_details.xlsx'),
       fetch('./data/ABDM_Enabled_Facilities.csv'),
       fetch('./data/public_facility_details.xlsx').catch(() => null),
-      fetchFirstExisting(['./data/scan_and_share.xlsx', './data/scan_and_share.csv']),
-      fetchFirstExisting(['./data/hrl_linked.xlsx', './data/hrl_linked.csv'])
+      fetchFirstExisting([
+        './data/Scan and Share_details.csv',
+        './data/Scan and Share_details.xlsx',
+        './data/scan_and_share.xlsx',
+        './data/scan_and_share.csv'
+      ]),
+      fetchFirstExisting([
+        './data/Health Records Linked_details.csv',
+        './data/Health Records Linked_details.xlsx',
+        './data/hrl_linked.xlsx',
+        './data/hrl_linked.csv'
+      ])
     ]);
     if (!r1.ok || !r2.ok) throw new Error('Saved data files not reachable');
     const [b1, b2] = await Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]);
