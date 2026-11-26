@@ -871,16 +871,20 @@
       <div class="upload-grid">
         <div>
           <label class="field-label">
-            <i class="fa-solid fa-file-excel" style="color:#059669;"></i> File 1 — Total Facility Registry (.xlsx / .csv)
+            <i class="fa-solid fa-file-excel" style="color:#059669;"></i> File 1 — Total Facility Registry (Private &amp; Public .xlsx / .csv)
           </label>
           <div id="zone1" class="upload-zone" onclick="document.getElementById('f1').click()"
                ondragover="drgOver(event,'zone1')" ondragleave="drgLeave('zone1')" ondrop="drgDrop(event,'file1')">
-            <input type="file" id="f1" class="hidden" accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1')">
+            <input type="file" id="f1" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',false)">
+            <input type="file" id="f1Add" class="hidden" multiple accept=".xlsx,.xls,.csv" onchange="pickFile(event,'file1',true)">
             <i id="z1ico" class="fa-solid fa-file-excel upload-zone-icon" style="color:#059669;"></i>
-            <div class="upload-zone-text">
-              <p id="z1txt" class="upload-zone-main">Click or drag &amp; drop File 1</p>
-              <p class="upload-zone-sub">facility_details.xlsx (filters Status = Approved)</p>
+            <div class="upload-zone-text" style="flex:1;">
+              <p id="z1txt" class="upload-zone-main">Click or drag &amp; drop Private + Public file(s)</p>
+              <p class="upload-zone-sub">Select 1 or 2 files (filters Status = Approved)</p>
             </div>
+            <button id="addSecondF1Btn" type="button" onclick="event.stopPropagation(); document.getElementById('f1Add').click()" class="btn btn-outline hidden" style="padding:4px 9px; font-size:11px; flex-shrink:0;">
+              <i class="fa-solid fa-plus" style="color:#059669;"></i> Add 2nd File
+            </button>
           </div>
         </div>
 
@@ -890,7 +894,7 @@
           </label>
           <div id="zone2" class="upload-zone" onclick="document.getElementById('f2').click()"
                ondragover="drgOver(event,'zone2')" ondragleave="drgLeave('zone2')" ondrop="drgDrop(event,'file2')">
-            <input type="file" id="f2" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'file2')">
+            <input type="file" id="f2" class="hidden" accept=".csv,.xlsx,.xls" onchange="pickFile(event,'file2',false)">
             <i id="z2ico" class="fa-solid fa-file-csv upload-zone-icon" style="color:#1d4ed8;"></i>
             <div class="upload-zone-text">
               <p id="z2txt" class="upload-zone-main">Click or drag &amp; drop File 2</p>
@@ -929,6 +933,21 @@
     <div id="loadingBox" class="panel-card loading-box hidden">
       <div class="spinner"></div>
       <p style="font-size:13px; font-weight:600; color:#475569; margin:0;">Processing facility records…</p>
+    </div>
+
+    <!-- ─── SINGLE GLOBAL OWNERSHIP FILTER BAR ─── -->
+    <div id="ownershipBar" class="panel-card compact-bar hidden">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <span style="font-size:11.5px; font-weight:700; color:#475569; text-transform:uppercase; letter-spacing:0.3px;">
+          <i class="fa-solid fa-building-shield" style="color:var(--blue); margin-right:4px;"></i>Facility Ownership:
+        </span>
+        <div id="ownershipFilterBtns" style="display:inline-flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="slicer-chip selected" onclick="setOwnershipFilter('Total')">Total (All)</button>
+          <button type="button" class="slicer-chip" onclick="setOwnershipFilter('Private')">Private</button>
+          <button type="button" class="slicer-chip" onclick="setOwnershipFilter('Public')">Public (Govt)</button>
+        </div>
+      </div>
+      <span id="ownershipSummaryTag" style="font-size:12px; font-weight:600; color:#0f3c6e;"></span>
     </div>
 
     <!-- ─── KPI CARDS (4 side-by-side in same row) ─── -->
@@ -1137,6 +1156,7 @@
               <tr>
                 <th>#</th>
                 <th class="row-th">District</th>
+                <th class="row-th">Ownership</th>
                 <th class="row-th">Facility Type</th>
                 <th class="row-th">Facility Id</th>
                 <th class="row-th">Facility Name</th>
@@ -1172,12 +1192,30 @@
 // STATE
 // =====================================================================
 let f1Data = null, f2Data = null;
-let f1Name = '', f2Name = '';
+let f1Names = [], f2Name = '';
 let masterList = [];
-let multiHmisFacilitiesCount = 0;
-let exclusions = new Set(['UWIN', 'UT OF DNH DD PUBLIC HEALTH MANAGEMENT PORTAL', 'PMNDP', 'Nikshay']);
+let ownershipFilter = 'Total'; // 'Total' | 'Private' | 'Public'
+let exclusions = new Set(['UWIN', 'UT OF DNH DD PUBLIC HEALTH MANAGEMENT PORTAL', 'PMNDP', 'Nikshay', 'eSanjeevani 2.0']);
 let slcType = new Set(), slcStatus = new Set(), slcDist = new Set(), hmisDistF = new Set();
 const DISTRICTS = ['DADRA AND NAGAR HAVELI', 'DAMAN', 'DIU'];
+
+function getActiveMasterList() {
+  if (ownershipFilter === 'Private') return masterList.filter(r => r.ownership === 'Private');
+  if (ownershipFilter === 'Public') return masterList.filter(r => r.ownership === 'Public');
+  return masterList;
+}
+
+function setOwnershipFilter(mode) {
+  ownershipFilter = mode;
+  document.querySelectorAll('#ownershipFilterBtns button').forEach(btn => {
+    const label = btn.textContent.trim();
+    const isMatch = (mode === 'Total' && label.startsWith('Total')) ||
+                    (mode === 'Private' && label === 'Private') ||
+                    (mode === 'Public' && label.startsWith('Public'));
+    btn.classList.toggle('selected', isMatch);
+  });
+  renderAllDashboard();
+}
 
 // =====================================================================
 // DRAG & DROP / UPLOAD
@@ -1188,9 +1226,12 @@ function drgDrop(e, k) {
   e.preventDefault();
   const z = k === 'file1' ? 'zone1' : 'zone2';
   document.getElementById(z).classList.remove('drag-over');
-  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0], k);
+  if (e.dataTransfer.files.length) loadFiles(e.dataTransfer.files, k, false);
 }
-function pickFile(e, k) { if (e.target.files[0]) loadFile(e.target.files[0], k); }
+function pickFile(e, k, append = false) {
+  if (e.target.files.length) loadFiles(e.target.files, k, append);
+  e.target.value = '';
+}
 
 function parseBuffer(buf, filename) {
   const lower = filename.toLowerCase();
@@ -1203,41 +1244,59 @@ function parseBuffer(buf, filename) {
   return XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 }
 
-function markZoneReady(k, filename) {
+function markZoneReady(k, displayLabel) {
   const zi = k === 'file1' ? 'z1ico' : 'z2ico';
   const zt = k === 'file1' ? 'z1txt' : 'z2txt';
   const zn = k === 'file1' ? 'zone1' : 'zone2';
-  document.getElementById(zt).textContent = '✅ ' + filename;
+  document.getElementById(zt).textContent = '✅ ' + displayLabel;
   document.getElementById(zi).className = 'fa-solid fa-circle-check upload-zone-icon';
   document.getElementById(zi).style.color = '#059669';
   document.getElementById(zn).classList.add('ready');
+  if (k === 'file1') {
+    document.getElementById('addSecondF1Btn').classList.remove('hidden');
+  }
 }
 
-function loadFile(file, k) {
-  markZoneReady(k, file.name);
-  const reader = new FileReader();
-  reader.onload = e => {
-    const rows = parseBuffer(e.target.result, file.name);
-    if (k === 'file1') { f1Data = rows; f1Name = file.name; }
-    else { f2Data = rows; f2Name = file.name; }
-    document.getElementById('processBtn').disabled = !(f1Data && f2Data);
-  };
-  reader.readAsArrayBuffer(file);
+async function loadFiles(fileList, k, append) {
+  const files = Array.from(fileList);
+  if (k === 'file1') {
+    if (!append) { f1Data = []; f1Names = []; }
+    for (const file of files) {
+      const buf = await file.arrayBuffer();
+      const rows = parseBuffer(buf, file.name);
+      f1Data = (f1Data || []).concat(rows);
+      if (!f1Names.includes(file.name)) f1Names.push(file.name);
+    }
+    markZoneReady('file1', f1Names.join(' + '));
+  } else {
+    const file = files[0];
+    const buf = await file.arrayBuffer();
+    f2Data = parseBuffer(buf, file.name);
+    f2Name = file.name;
+    markZoneReady('file2', f2Name);
+  }
+  document.getElementById('processBtn').disabled = !(f1Data && f1Data.length && f2Data);
 }
 
 async function loadSavedDataFolder(silent = false) {
   try {
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r1Pub] = await Promise.all([
       fetch('./data/facility_details.xlsx'),
-      fetch('./data/ABDM_Enabled_Facilities.csv')
+      fetch('./data/ABDM_Enabled_Facilities.csv'),
+      fetch('./data/public_facility_details.xlsx').catch(() => null)
     ]);
     if (!r1.ok || !r2.ok) throw new Error('Saved data files not reachable');
     const [b1, b2] = await Promise.all([r1.arrayBuffer(), r2.arrayBuffer()]);
     f1Data = parseBuffer(b1, 'facility_details.xlsx');
+    f1Names = ['facility_details.xlsx'];
+    if (r1Pub && r1Pub.ok) {
+      const bPub = await r1Pub.arrayBuffer();
+      f1Data = f1Data.concat(parseBuffer(bPub, 'public_facility_details.xlsx'));
+      f1Names.push('public_facility_details.xlsx');
+    }
     f2Data = parseBuffer(b2, 'ABDM_Enabled_Facilities.csv');
-    f1Name = 'facility_details.xlsx';
     f2Name = 'ABDM_Enabled_Facilities.csv';
-    markZoneReady('file1', f1Name);
+    markZoneReady('file1', f1Names.join(' + '));
     markZoneReady('file2', f2Name);
     document.getElementById('processBtn').disabled = false;
     processFiles();
@@ -1294,6 +1353,7 @@ function removeExcl(n) {
 // =====================================================================
 function processFiles() {
   document.getElementById('loadingBox').classList.remove('hidden');
+  document.getElementById('ownershipBar').classList.add('hidden');
   document.getElementById('kpiSection').classList.add('hidden');
   document.getElementById('dashSection').classList.add('hidden');
   setTimeout(() => {
@@ -1312,20 +1372,29 @@ const nid = s => String(s || '').trim().toUpperCase();
 const nd = s => String(s || '').trim().toUpperCase();
 const cs = s => String(s || '').trim();
 
+function normalizeOwnership(raw) {
+  const val = cs(raw).toLowerCase();
+  if (val.includes('gov') || val.includes('public')) return 'Public';
+  if (val.includes('priv')) return 'Private';
+  return val ? tc(val) : '';
+}
+
 function _process() {
   const exclLower = new Set([...exclusions].map(x => x.toLowerCase()));
 
-  // File 1: Approved facilities only
+  // File 1 (Private + Public merged): Approved facilities only
   const appr = {};
   for (const r of f1Data) {
-    if (cs(r['Facility Status']).toLowerCase() !== 'approved') continue;
+    if (cs(r['Facility Status'] || r['Status']).toLowerCase() !== 'approved') continue;
     const id = nid(r['Facility Id'] || r['Facility ID'] || r['HFR ID'] || r['HFR Id']);
     if (!id) continue;
+    const ownership = normalizeOwnership(r['Facility Ownership'] || r['Ownership']);
     appr[id] = {
       hfrId: id,
       name: cs(r['Facility Name']),
-      district: nd(r['District']),
+      district: nd(r['District'] || r['District Name']),
       facilityType: cs(r['Facility Type']),
+      ownership: ownership || 'Private',
       contactPerson: cs(r['Facility Contact Person Name']),
       contactMobile: cs(r['Facility Contact Person Mobile No'])
     };
@@ -1338,21 +1407,21 @@ function _process() {
     if (!dn || exclLower.has(dn.toLowerCase())) continue;
     const id = nid(r['Facility ID'] || r['Facility Id'] || r['HFR ID']);
     if (!id) continue;
-    if (!hmisMap[id]) hmisMap[id] = { names: [], dates: [] };
+    if (!hmisMap[id]) hmisMap[id] = { names: [], dates: [], ownership: '' };
     if (!hmisMap[id].names.includes(dn)) hmisMap[id].names.push(dn);
     const dt = cs(r['Date']);
     if (dt) hmisMap[id].dates.push(dt);
+    if (!hmisMap[id].ownership) hmisMap[id].ownership = normalizeOwnership(r['Ownership'] || r['Facility Ownership']);
   }
 
   // Merge by HFR ID
   masterList = [];
-  multiHmisFacilitiesCount = 0;
   for (const [id, fac] of Object.entries(appr)) {
     const h = hmisMap[id];
-    if (h && h.names.length > 1) multiHmisFacilitiesCount++;
     const latestDate = h && h.dates.length ? [...h.dates].sort().pop() : '';
     masterList.push({
       ...fac,
+      ownership: fac.ownership || (h && h.ownership) || 'Private',
       status: h ? 'Facility is ABDM Enabled' : 'Pending',
       hmisNames: h ? h.names : [],
       hmisName: h ? h.names.join(', ') : '(blank)',
@@ -1364,30 +1433,40 @@ function _process() {
   const now = new Date();
   document.getElementById('lastUpdatedTxt').textContent = now.toLocaleString('en-IN');
   document.getElementById('lastUpdatedPill').classList.remove('hidden');
-  document.getElementById('loadedFilesSummary').textContent = `${f1Name} & ${f2Name}`;
+  document.getElementById('loadedFilesSummary').textContent = `${f1Names.join(' + ')} & ${f2Name}`;
   document.getElementById('exclCountBadge').textContent = exclusions.size;
   document.getElementById('collapseUploadBtn').classList.remove('hidden');
   document.getElementById('toggleUploadBtn').classList.remove('hidden');
   toggleUploadPanel(false);
 
-  // Render Dashboard
+  renderAllDashboard();
+
+  document.getElementById('ownershipBar').classList.remove('hidden');
+  document.getElementById('kpiSection').classList.remove('hidden');
+  document.getElementById('dashSection').classList.remove('hidden');
+}
+
+function renderAllDashboard() {
+  const active = getActiveMasterList();
+  const label = ownershipFilter === 'Total' ? 'Total (Private + Public)' : `${ownershipFilter} Only`;
+  const tag = document.getElementById('ownershipSummaryTag');
+  if (tag) tag.textContent = `View: ${label} • ${active.length} Facilities`;
+
   renderKPIs();
   renderDistrict();
   renderFacType();
   renderHMIS();
   buildSlicers();
   filterLinelist();
-
-  document.getElementById('kpiSection').classList.remove('hidden');
-  document.getElementById('dashSection').classList.remove('hidden');
 }
 
 // =====================================================================
 // KPI
 // =====================================================================
 function renderKPIs() {
-  const tot = masterList.length;
-  const adp = masterList.filter(r => r.status === 'Facility is ABDM Enabled').length;
+  const list = getActiveMasterList();
+  const tot = list.length;
+  const adp = list.filter(r => r.status === 'Facility is ABDM Enabled').length;
   const pnd = tot - adp;
   const pct = tot > 0 ? ((adp / tot) * 100).toFixed(2) : '0.00';
   document.getElementById('kpiTotal').textContent = tot;
@@ -1399,9 +1478,10 @@ function renderKPIs() {
 }
 
 // =====================================================================
-// DISTRICT TABLE + PROGRESS BARS
+// DISTRICT TABLE + PROGRESS BARS (with Public vs Private Split on Total)
 // =====================================================================
 function renderDistrict() {
+  const list = getActiveMasterList();
   const tb = document.getElementById('districtTbody');
   const bars = document.getElementById('districtBarsContainer');
   tb.innerHTML = '';
@@ -1409,7 +1489,7 @@ function renderDistrict() {
   let gT = 0, gA = 0, gP = 0;
 
   for (const dist of DISTRICTS) {
-    const rows = masterList.filter(r => r.district === dist);
+    const rows = list.filter(r => r.district === dist);
     const tot = rows.length;
     const adp = rows.filter(r => r.status === 'Facility is ABDM Enabled').length;
     const pnd = tot - adp;
@@ -1426,6 +1506,21 @@ function renderDistrict() {
       <td><span style="font-weight:800; color:${pnd === 0 ? '#059669' : '#b45309'};">${pct}</span></td>`;
     tb.appendChild(tr);
 
+    // Public vs Private split sub-line when Total is selected
+    let splitHtml = '';
+    if (ownershipFilter === 'Total') {
+      const distAll = masterList.filter(r => r.district === dist);
+      const pubAll = distAll.filter(r => r.ownership === 'Public');
+      const prvAll = distAll.filter(r => r.ownership === 'Private');
+      const pubAdp = pubAll.filter(r => r.status === 'Facility is ABDM Enabled').length;
+      const prvAdp = prvAll.filter(r => r.status === 'Facility is ABDM Enabled').length;
+      splitHtml = `<div style="font-size:11px; color:#64748b; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
+        <span>Public: <strong style="color:#0f3c6e;">${pubAdp}/${pubAll.length}</strong></span>
+        <span>•</span>
+        <span>Private: <strong style="color:#0f3c6e;">${prvAdp}/${prvAll.length}</strong></span>
+      </div>`;
+    }
+
     const barColor = pctNum >= 99 ? '#10b981' : (pctNum >= 90 ? '#2563eb' : '#f59e0b');
     const card = document.createElement('div');
     card.innerHTML = `
@@ -1435,7 +1530,8 @@ function renderDistrict() {
       </div>
       <div style="width:100%; height:9px; background:#e2e8f0; border-radius:999px; overflow:hidden;">
         <div style="width:${pctNum.toFixed(1)}%; height:100%; background:${barColor}; border-radius:999px; transition:width 0.5s ease;"></div>
-      </div>`;
+      </div>
+      ${splitHtml}`;
     bars.appendChild(card);
   }
 
@@ -1455,7 +1551,8 @@ function renderDistrict() {
 // FACILITY TYPE × DISTRICT TABLE
 // =====================================================================
 function renderFacType() {
-  const types = [...new Set(masterList.map(r => r.facilityType))].filter(Boolean).sort();
+  const list = getActiveMasterList();
+  const types = [...new Set(list.map(r => r.facilityType))].filter(Boolean).sort();
   const thead = document.getElementById('factypeHead');
   const tbody = document.getElementById('factypeTbody');
 
@@ -1476,8 +1573,13 @@ function renderFacType() {
   let utA = 0, utP = 0, utT = 0;
   tbody.innerHTML = '';
 
+  if (!types.length) {
+    tbody.innerHTML = `<tr><td colspan="14" style="padding:24px; color:#94a3b8; font-weight:600;">No ${ownershipFilter} facilities in current dataset.</td></tr>`;
+    return;
+  }
+
   for (const ft of types) {
-    const tRows = masterList.filter(r => r.facilityType === ft);
+    const tRows = list.filter(r => r.facilityType === ft);
     let rA = 0, rP = 0;
     let cells = '';
     const safeFt = ft.replace(/'/g, "\\'");
@@ -1514,6 +1616,7 @@ function renderFacType() {
 // HMIS REPORT
 // =====================================================================
 function renderHMIS() {
+  const list = getActiveMasterList();
   DISTRICTS.forEach((d, i) => {
     const el = document.getElementById(`hmisD${i + 1}`);
     if (el) el.textContent = tc(d);
@@ -1537,12 +1640,14 @@ function renderHMIS() {
   });
 
   const filtered = hmisDistF.size === 0
-    ? masterList.filter(r => r.status === 'Facility is ABDM Enabled')
-    : masterList.filter(r => r.status === 'Facility is ABDM Enabled' && hmisDistF.has(r.district));
+    ? list.filter(r => r.status === 'Facility is ABDM Enabled')
+    : list.filter(r => r.status === 'Facility is ABDM Enabled' && hmisDistF.has(r.district));
 
   const cm = {}, dm = {};
+  let multiCount = 0;
   for (const r of filtered) {
     const names = r.hmisNames && r.hmisNames.length ? r.hmisNames : ['(blank)'];
+    if (names.length > 1) multiCount++;
     for (const h of names) {
       cm[h] = (cm[h] || 0) + 1;
       if (!dm[h]) dm[h] = {};
@@ -1576,8 +1681,8 @@ function renderHMIS() {
   tb.appendChild(tr);
 
   const noteEl = document.getElementById('hmisMultiNote');
-  if (multiHmisFacilitiesCount > 0) {
-    noteEl.textContent = `* Note: ${multiHmisFacilitiesCount} approved facilities have adopted more than one HMIS software, so individual HMIS counts may sum higher than unique facilities (${totalUnique}).`;
+  if (multiCount > 0) {
+    noteEl.textContent = `* Note: ${multiCount} approved facilities have adopted more than one HMIS software, so individual HMIS counts may sum higher than unique facilities (${totalUnique}).`;
     noteEl.classList.remove('hidden');
   } else {
     noteEl.classList.add('hidden');
@@ -1614,7 +1719,8 @@ function drillDownHMIS(hmisName) {
 // SLICERS & LINE LIST
 // =====================================================================
 function buildSlicers() {
-  const types = [...new Set(masterList.map(r => r.facilityType))].sort();
+  const list = getActiveMasterList();
+  const types = [...new Set(list.map(r => r.facilityType))].sort();
   const statuses = ['Facility is ABDM Enabled', 'Pending'];
   buildChips('slicerType', types, slcType, 'type');
   buildChips('slicerStatus', statuses, slcStatus, 'status');
@@ -1642,7 +1748,8 @@ function buildChips(cid, opts, sel, key) {
 }
 
 function clearSlicer(key) {
-  if (key === 'type') { slcType.clear(); buildChips('slicerType', [...new Set(masterList.map(r => r.facilityType))].sort(), slcType, 'type'); }
+  const list = getActiveMasterList();
+  if (key === 'type') { slcType.clear(); buildChips('slicerType', [...new Set(list.map(r => r.facilityType))].sort(), slcType, 'type'); }
   if (key === 'status') { slcStatus.clear(); buildChips('slicerStatus', ['Facility is ABDM Enabled', 'Pending'], slcStatus, 'status'); }
   if (key === 'district') { slcDist.clear(); buildChips('slicerDistrict', DISTRICTS.map(tc), slcDist, 'district'); }
   filterLinelist();
@@ -1656,8 +1763,9 @@ function clearAllSlicers() {
 }
 
 function getFilteredLinelist() {
+  const list = getActiveMasterList();
   const q = (document.getElementById('llSearch')?.value || '').toLowerCase();
-  return masterList.filter(r => {
+  return list.filter(r => {
     const tM = slcType.size === 0 || slcType.has(r.facilityType);
     const sM = slcStatus.size === 0 || slcStatus.has(r.status);
     const dM = slcDist.size === 0 || slcDist.has(r.district) || slcDist.has(tc(r.district));
@@ -1667,9 +1775,10 @@ function getFilteredLinelist() {
 }
 
 function filterLinelist() {
+  const list = getActiveMasterList();
   const rows = getFilteredLinelist();
   document.getElementById('llCount').textContent = rows.length;
-  document.getElementById('llTotal').textContent = masterList.length;
+  document.getElementById('llTotal').textContent = list.length;
 
   const tb = document.getElementById('llBody');
   const mob = document.getElementById('llMobileCards');
@@ -1677,7 +1786,7 @@ function filterLinelist() {
   mob.innerHTML = '';
 
   if (!rows.length) {
-    tb.innerHTML = `<tr><td colspan="10" style="padding:32px; color:#94a3b8; font-weight:600; text-align:center;">No records match the selected filters.</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="11" style="padding:32px; color:#94a3b8; font-weight:600; text-align:center;">No records match the selected filters.</td></tr>`;
     mob.innerHTML = `<div class="mob-card" style="text-align:center; color:#94a3b8; font-weight:600; padding:24px;">No records match the selected filters.</div>`;
     return;
   }
@@ -1689,11 +1798,15 @@ function filterLinelist() {
     const badge = r.status === 'Facility is ABDM Enabled'
       ? `<span class="badge-adopted"><i class="fa-solid fa-check"></i>ABDM Enabled</span>`
       : `<span class="badge-pending"><i class="fa-solid fa-clock"></i>Pending</span>`;
+    const ownBadge = r.ownership === 'Public'
+      ? `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;">Public</span>`
+      : `<span style="display:inline-block; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">Private</span>`;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
       <td style="color:#94a3b8;">${i + 1}</td>
       <td class="row-label">${esc(tc(r.district))}</td>
+      <td>${ownBadge}</td>
       <td style="text-align:left;">${esc(r.facilityType)}</td>
       <td style="font-family:monospace; font-size:11.5px; color:#1d4ed8;">${esc(r.hfrId)}</td>
       <td style="text-align:left; font-weight:600;">${esc(r.name)}</td>
@@ -1710,7 +1823,7 @@ function filterLinelist() {
       <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px; margin-bottom:8px;">
         <div style="min-width:0;">
           <p style="font-size:13.5px; font-weight:700; color:#0f172a; margin:0; line-height:1.3;">${esc(r.name)}</p>
-          <p style="font-size:11px; font-family:monospace; color:#1d4ed8; margin:3px 0 0 0;">${esc(r.hfrId)} &bull; ${esc(tc(r.district))}</p>
+          <p style="font-size:11px; font-family:monospace; color:#1d4ed8; margin:3px 0 0 0;">${esc(r.hfrId)} &bull; ${esc(tc(r.district))} &bull; ${esc(r.ownership)}</p>
         </div>
         ${badge}
       </div>
@@ -1733,32 +1846,36 @@ function filterLinelist() {
 // EXPORTS
 // =====================================================================
 function exportFullCSV() {
-  if (!masterList.length) return alert('Process files first.');
-  dl(masterList.map(r => ({
-    'Facility Id': r.hfrId, 'Facility Name': r.name, 'District': tc(r.district),
-    'Facility Type': r.facilityType, 'ABDM Status': r.status, 'Display Name': r.hmisName,
-    'Date': r.hmisDate || '(blank)', 'Contact Person': r.contactPerson, 'Mobile No': r.contactMobile
-  })), 'ABDM_HMIS_Full_Report.csv');
+  const list = getActiveMasterList();
+  if (!list.length) return alert('Process files first.');
+  dl(list.map(r => ({
+    'Facility Id': r.hfrId, 'Facility Name': r.name, 'Ownership': r.ownership,
+    'District': tc(r.district), 'Facility Type': r.facilityType, 'ABDM Status': r.status,
+    'Display Name': r.hmisName, 'Date': r.hmisDate || '(blank)',
+    'Contact Person': r.contactPerson, 'Mobile No': r.contactMobile
+  })), `ABDM_HMIS_Full_Report_${ownershipFilter}.csv`);
 }
 
 function exportDistrictCSV() {
-  if (!masterList.length) return;
+  const list = getActiveMasterList();
+  if (!list.length) return;
   const data = DISTRICTS.map(d => {
-    const rows = masterList.filter(r => r.district === d), tot = rows.length,
+    const rows = list.filter(r => r.district === d), tot = rows.length,
       adp = rows.filter(r => r.status === 'Facility is ABDM Enabled').length, pnd = tot - adp,
       pct = tot > 0 ? ((adp / tot) * 100).toFixed(2) + '%' : '—';
-    return { 'District': tc(d), 'Total Approved': tot, 'ABDM Enabled': adp, 'Pending': pnd, 'Adoption %': pct };
+    return { 'District': tc(d), 'Ownership': ownershipFilter, 'Total Approved': tot, 'ABDM Enabled': adp, 'Pending': pnd, 'Adoption %': pct };
   });
-  dl(data, 'District_Wise_Report.csv');
+  dl(data, `District_Wise_Report_${ownershipFilter}.csv`);
 }
 
 function exportFacTypeCSV() {
-  if (!masterList.length) return;
-  const types = [...new Set(masterList.map(r => r.facilityType))].sort();
+  const list = getActiveMasterList();
+  if (!list.length) return;
+  const types = [...new Set(list.map(r => r.facilityType))].sort();
   const data = types.map(ft => {
-    const obj = { 'Facility Type': ft };
+    const obj = { 'Facility Type': ft, 'Ownership': ownershipFilter };
     DISTRICTS.forEach(d => {
-      const sub = masterList.filter(r => r.facilityType === ft && r.district === d);
+      const sub = list.filter(r => r.facilityType === ft && r.district === d);
       const a = sub.filter(r => r.status === 'Facility is ABDM Enabled').length;
       obj[tc(d) + ' Total'] = sub.length;
       obj[tc(d) + ' Enabled'] = a;
@@ -1766,12 +1883,13 @@ function exportFacTypeCSV() {
     });
     return obj;
   });
-  dl(data, 'FacilityType_District_Report.csv');
+  dl(data, `FacilityType_District_Report_${ownershipFilter}.csv`);
 }
 
 function exportHMISCSV() {
-  if (!masterList.length) return;
-  const adp = masterList.filter(r => r.status === 'Facility is ABDM Enabled');
+  const list = getActiveMasterList();
+  if (!list.length) return;
+  const adp = list.filter(r => r.status === 'Facility is ABDM Enabled');
   const tot = adp.length, cm = {}, dm = {};
   for (const r of adp) {
     const names = r.hmisNames && r.hmisNames.length ? r.hmisNames : ['(blank)'];
@@ -1782,21 +1900,23 @@ function exportHMISCSV() {
     }
   }
   const data = Object.entries(cm).sort((a, b) => b[1] - a[1]).map(([h, c]) => {
-    const o = { 'HMIS Name': h, 'Facilities Adopted': c, 'Share %': tot > 0 ? ((c / tot) * 100).toFixed(2) + '%' : '0%' };
+    const o = { 'HMIS Name': h, 'Ownership': ownershipFilter, 'Facilities Adopted': c, 'Share %': tot > 0 ? ((c / tot) * 100).toFixed(2) + '%' : '0%' };
     DISTRICTS.forEach(d => { o[tc(d)] = dm[h]?.[d] || 0; });
     return o;
   });
-  dl(data, 'HMIS_Report.csv');
+  dl(data, `HMIS_Report_${ownershipFilter}.csv`);
 }
 
 function exportLinelistCSV() {
-  if (!masterList.length) return;
+  const list = getActiveMasterList();
+  if (!list.length) return;
   const rows = getFilteredLinelist();
   dl(rows.map(r => ({
-    'District': tc(r.district), 'Facility Type': r.facilityType, 'Facility Id': r.hfrId,
-    'Facility Name': r.name, 'Contact Person': r.contactPerson, 'Mobile No': r.contactMobile,
-    'ABDM Status': r.status, 'Date': r.hmisDate || '(blank)', 'Display Name': r.hmisName
-  })), 'Filtered_Linelist.csv');
+    'District': tc(r.district), 'Ownership': r.ownership, 'Facility Type': r.facilityType,
+    'Facility Id': r.hfrId, 'Facility Name': r.name, 'Contact Person': r.contactPerson,
+    'Mobile No': r.contactMobile, 'ABDM Status': r.status, 'Date': r.hmisDate || '(blank)',
+    'Display Name': r.hmisName
+  })), `Filtered_Linelist_${ownershipFilter}.csv`);
 }
 
 function dl(data, fname) {
